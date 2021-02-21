@@ -1,4 +1,5 @@
 import re
+import requests
 import fasttext  # pip install fasttext
 from pororo import Pororo  # pip install pororo
 
@@ -95,6 +96,34 @@ def restore_ner(translated_text, ners):
     return translated_text
 
 
+def translate(source_text: str, source_lang: str, target_lang: str, api_client_id: str, api_client_secret: str):    
+    
+
+    data = {'text' : prep_source_text,
+            'source' : source_lang,
+            'target': target_lang}
+
+    header = {
+        # 'content-type': 'application/json; charset=UTF-8',
+        'X-Naver-Client-Id': api_client_id,
+        'X-Naver-Client-Secret': api_client_secret
+    }
+    print(data)
+    print(header)
+
+    response = requests.post(BASE_URL, headers=header, data= data)
+    rescode = response.status_code
+
+    if(rescode==200):
+        t_data = response.json()
+        translated_text = t_data['message']['result']['translatedText']
+        
+        return translated_text
+
+    else:
+        print("Error Code:" , rescode)
+
+
 if __name__ == '__main__':
     client_id = "PwtsQmgHn5h50GCthwtj"
     client_secret = "zNWtEXWpt_"
@@ -107,8 +136,8 @@ if __name__ == '__main__':
         raise ValueError
     
     prep_source_text, ners = replace_ner_to_special_token(text, source_lang)
-    print(prep_source_text)
-    # translated_text = translate(prep_source_text, source_lang, target_lang, client_id, client_secret)
-    result_text = restore_ner(prep_source_text, ners)
+    # print(prep_source_text)
+    translated_text = translate(prep_source_text, source_lang, target_lang, client_id, client_secret)
+    result_text = restore_ner(translated_text, ners)
 
     print(result_text)
