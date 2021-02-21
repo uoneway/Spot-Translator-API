@@ -62,7 +62,7 @@ def isKoreanIncluded(text, check_to_num=-1):
     return False
 
 
-def replace_ner_to_special_token(text, lang):
+def _replace_ner_to_special_token(text, lang):
     ner_model = ner_models[lang]
     ner_results = ner_model(text)
     # print(ner_results)
@@ -88,7 +88,7 @@ def replace_ner_to_special_token(text, lang):
 
     return text, ners
 
-def restore_ner(translated_text, ners):
+def _restore_ner(translated_text, ners):
     # re.sub(r"'(NER)(\d+)'", rf"{ners[\2]}", translated_text)  # 변수 안에 reg ㅍ현이 들어가야 하는데 어떻게 하느거지..
     for idx, ner in enumerate(ners):
         translated_text = re.sub(rf"'NER{idx}'", ner, translated_text)
@@ -96,10 +96,8 @@ def restore_ner(translated_text, ners):
     return translated_text
 
 
-def translate(source_text: str, source_lang: str, target_lang: str, api_client_id: str, api_client_secret: str):    
-    
-
-    data = {'text' : prep_source_text,
+def request_translate(source_text, source_lang, target_lang, api_client_id, api_client_secret):    
+    data = {'text' : source_text,
             'source' : source_lang,
             'target': target_lang}
 
@@ -124,20 +122,25 @@ def translate(source_text: str, source_lang: str, target_lang: str, api_client_i
         print("Error Code:" , rescode)
 
 
+def translate(source_text: str, target_lang: str, api_client_id: str, api_client_secret: str): 
+    # Check language of source_text
+    source_lang = 'ko' if isKoreanIncluded(source_text, 100) else 'en'  #identify_lang(text)
+    if source_lang not in CAN_LANG:
+        raise ValueError
+    
+    prep_source_text, ners = _replace_ner_to_special_token(source_text, source_lang)
+    # print(prep_source_text)
+    translated_text = request_translate(prep_source_text, source_lang, target_lang, api_client_id, api_client_secret)
+    result_text = _restore_ner(translated_text, ners)
+
+    return result_text   
+
+
 if __name__ == '__main__':
-    client_id = "PwtsQmgHn5h50GCthwtj"
-    client_secret = "zNWtEXWpt_"
+    api_client_id = "PwtsQmgHn5h50GCthwtj"
+    api_client_secret = "zNWtEXWpt_"
     text_ko = '오늘은 이상한 날이다' 
     text = 'Today is a strange day.' 
     target_lang = 'ko'
 
-    source_lang = 'ko' if isKoreanIncluded(text, 100) else 'en'  #identify_lang(text)
-    if source_lang not in CAN_LANG:
-        raise ValueError
-    
-    prep_source_text, ners = replace_ner_to_special_token(text, source_lang)
-    # print(prep_source_text)
-    translated_text = translate(prep_source_text, source_lang, target_lang, client_id, client_secret)
-    result_text = restore_ner(translated_text, ners)
-
-    print(result_text)
+    print(translate(text, target_lang, api_client_id, api_client_secret))
