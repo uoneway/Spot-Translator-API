@@ -1,7 +1,7 @@
 import re
 import requests
-import fasttext  # pip install fasttext
-from pororo import Pororo  # pip install pororo
+import fasttext
+# from pororo import Pororo  
 from utils import load_obj
 
 
@@ -14,22 +14,22 @@ PAPAGO_CAN_LANG = {  # https://developers.naver.com/docs/papago/papago-nmt-api-r
         'zh-CN': ('ko', 'en', 'ja', 'zh-TW'),  # 중국어 간체
         'zh-TW': ('ko', 'en', 'ja', 'zh-CN'),  # 중국어 번체
 }
-PORORO_CAN_LANG = {  # https://kakaobrain.github.io/pororo/seq2seq/mt.html
-    'ko': ('en', 'ja', 'zh'),
-    'en': ('ko', 'ja', 'zh'),
-    'ja': ('ko', 'en', 'zh'),
-    'zh': ('ko', 'en', 'ja'),
-}
+# PORORO_CAN_LANG = {  # https://kakaobrain.github.io/pororo/seq2seq/mt.html
+#     'ko': ('en', 'ja', 'zh'),
+#     'en': ('ko', 'ja', 'zh'),
+#     'ja': ('ko', 'en', 'zh'),
+#     'zh': ('ko', 'en', 'ja'),
+# }
 CAN_LANG = ('ko', 'en')
 
 # print(Pororo.available_models("named_entity_recognition"))
-print("Start to load Pororo NER models...")
-ner_models = {
-    'ko': Pororo(task="ner", lang="ko"),
-    'en': Pororo(task="ner", lang="en"),
-    # 'ja': Pororo(task="ner", lang="ja"),
-}
-print("End to load Pororo NER models!")
+# print("Start to load Pororo NER models...")
+# ner_models = {
+#     'ko': Pororo(task="ner", lang="ko"),
+#     'en': Pororo(task="ner", lang="en"),
+#     # 'ja': Pororo(task="ner", lang="ja"),
+# }
+# print("End to load Pororo NER models!")
 
 BASE_TERM_SET_PATH = 'datasets/ml_term_set.pkl'
 BASE_TERM_SET = load_obj(BASE_TERM_SET_PATH)
@@ -86,14 +86,14 @@ def _replace_ne_to_special_token(text, lang, predefiend_ne_set: set=None):
     # 대치한 경우를 모두 dict에 담아줘서 추후 다시 복구하는게 안전할 것 같지만...  replaced_dict = {}
 
     #1. ne detection model 사용
-    ner_model = ner_models[lang]
-    ner_results = ner_model(text)
+    # ner_model = ner_models[lang]
+    # ner_results = ner_model(text)
 
-    for ner_tuple in ner_results:  
-        if ner_tuple[1] != 'O':
-            # print(ner_tuple[0])
-            detected_ne_set.add(ner_tuple[0])
-    print("1. Detected NEs: ", detected_ne_set)
+    # for ner_tuple in ner_results:  
+    #     if ner_tuple[1] != 'O':
+    #         # print(ner_tuple[0])
+    #         detected_ne_set.add(ner_tuple[0])
+    # print("1. Detected NEs: ", detected_ne_set)
 
     # 2. 문장 중간에 대문자로 시작(전체 대문자인 경우도 포함)하거나 문장(또는 전체 string)처음이지만 전체가 대문자인 경우 
     # UDF FasdFsada. Instead Unigram. This Will. \n FasdFsada 에서 
