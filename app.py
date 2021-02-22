@@ -17,9 +17,8 @@ class Translate(Resource):
         api_client_info = request.json.get('api_client_info')
         data = request.json.get('data')
 
-        translated_text, api_rescode = translate(data['source_text'], data['target_lang'], 
-                                                api_client_info['id'], api_client_info['secret'], 
-                                                )# user_term_set)
+        translated_text, api_rescode = translate(data['source_text'], \
+                                                api_client_info['id'], api_client_info['secret'])
 
         return {
             'message': {

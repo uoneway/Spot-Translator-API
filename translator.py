@@ -174,11 +174,20 @@ def request_translate(source_text, source_lang, target_lang, api_client_id, api_
         return None, rescode
 
 
-def translate(source_text: str, target_lang: str, api_client_id: str, api_client_secret: str, term_set: set=None): 
+def translate(source_text:str, api_client_id:str, api_client_secret:str,\
+            main_lang:str='ko', sub_lang:str='en', term_set: set=None): 
+    """
+    main_lang: 사용자는 원문 클릭 시, 번역되어 보이는 언어(target language).
+        단 source_text가 main_lang인 경우는 아래 sub_lang이 target language으로 역할)
+    sub_lang: source_text가 main_lang인 경우 target language
+    """
+
     # Check language of source_text
-    source_lang = 'ko' if isKoreanIncluded(source_text, 100) else 'en'  #identify_lang(text)
+    source_lang = 'ko' if isKoreanIncluded(source_text, 100) else 'en'  # 추후 수정 필요. identify_lang(text)
     if source_lang not in CAN_LANG:
         raise ValueError
+
+    target_lang = sub_lang if source_lang is main_lang else main_lang
 
     print("source_text: ", source_text)
     
@@ -198,9 +207,11 @@ def translate(source_text: str, target_lang: str, api_client_id: str, api_client
 if __name__ == '__main__':
     api_client_id = "PwtsQmgHn5h50GCthwtj"
     api_client_secret = "zNWtEXWpt_"
-    text_ko = '오늘은 이상한 날이다' 
-    text = 'Today is a strange day.' 
-    target_lang = 'ko'
+
     # user_term_set_path = 'datasets/ml_term_set.pkl'
     # user_term_set = load_obj(user_term_set_path)
-    print(translate(text, target_lang, api_client_id, api_client_secret))
+
+    text_ko = '오늘은 이상한 날이다' 
+    text = 'Today is a strange day.' 
+
+    print(translate(text, api_client_id, api_client_secret))
