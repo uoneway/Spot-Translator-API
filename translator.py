@@ -3,6 +3,7 @@ import requests
 import fasttext
 # from pororo import Pororo  
 from utils import load_obj
+import time
 
 
 BASE_URL = "https://openapi.naver.com/v1/papago/n2mt"
@@ -209,6 +210,7 @@ def translate(source_text:str, api_client_id:str, api_client_secret:str,\
     sub_lang: source_text가 main_lang인 경우 target language
     """
 
+    start = time.time()
     # Check language of source_text
     source_lang = 'ko' if isKoreanIncluded(source_text, 100) else 'en'  # 추후 수정 필요. identify_lang(text)
     if source_lang not in CAN_LANG:
@@ -235,6 +237,8 @@ def translate(source_text:str, api_client_id:str, api_client_secret:str,\
         result_text = _restore_ne(translated_text, source_lang, ners) if source_lang == 'en'\
             else translated_text
         print("result_text:", result_text)
+        
+        print(f"time : {time.time() - start:.6f}초")
         return result_text, rescode
 
 
