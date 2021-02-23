@@ -74,12 +74,23 @@ def isKoreanIncluded(text, check_to_num=-1):
     return False
 
 
-def _replace_ne_to_special_token(text, lang, predefiend_ne_set: set=None):
+def _replace_ne_to_special_token(text, source_lang, predefiend_ne_set: set=None):
 
-    ## 처음에는 ner 단어를 활용해서 대치하려고 했으나 
+    # 시도1:처음에는 ner 단어를 활용해서 대치하려고 했으나 
     # 어떤 경우에는 그 기호 안에 있는 ner도 해석해버리는 경우가 많고, 다른 단어 해석에도 영향을 미칠 수 있음에 따라
-    # 'NER1'과 같이 보통 문장 쓸 떄도 키워드를 지칭해주는 방식으로 바꿔주고 + 의미없는 NER을 붙여줘서 바꿔주고
+    # 시도2: 'NER1'과 같이 보통 문장 쓸 떄도 키워드를 지칭해주는 방식으로 바꿔주고 + 의미없는 NER을 붙여줘서 바꿔주고
     #  추후다시 대치하는 방식으로 사용
+    # 근데 다시 여러가지 실험하다 보니 해당 단어를 지우고 '[1]'이나 '[NE1]', '[N1E]', 그냥 단어 양옆에 '' 넣어주는 등으로 대체하는게 아래 같은 텍스트 번역을 이상하게 만듦
+    #     Gunicorn forks multiple system processes within each dyno to allow a Python app to support multiple concurrent requests without requiring them to be thread-safe. In Gunicorn terminology, these are referred to as worker processes (not to be confused with Heroku worker processes, which run in their own dynos).
+    # 이건 계속 그대로인 예제: Then you will add the following line in your Procfile
+    # 시도3: 그래서 
+    # 영어는 그냥 단어를 모두 대문자로 바꿨다가 원복해주는 방식으로. 한국어는 해당 문자에 '' 붙여줬다가 복원
+    # 참고: 중요한 부분을 두드러지게 할 때 https://thoughts.chkwon.net/punctuation-korean-english/
+    # 한글에서는 ‘드러냄표’ 혹은 ‘밑줄’을 사용하는 것을 기본으로 ‘작은따옴표’의 사용도 허락한다.
+    # - 영어에서는 italics(이탤릭체)를 주로 사용하며, 때에 따라서 boldface(굵은 글씨체), underline(밑줄) 등을 사용하기도 한다. 
+    # 어떤 이는 single quotation mark(작은 따옴표) 혹은 double quotation mark(큰 따옴표)를 사용하기도 하나, 일반적으로 잘못된 용법이라고 한다.
+    # 시도4: 트위터 태그를 활용한 @TAG1 방식으로.
+
     # ner_set = set()
     # for ner_tuple in ner_results:
     #     if ner_tuple[1] != 'O':  # NER
@@ -112,8 +123,8 @@ def _replace_ne_to_special_token(text, lang, predefiend_ne_set: set=None):
     predefiend_detected_ne_set = set()
     if predefiend_ne_set is not None:
         # start_idx = len(detected_ne_list)
-        for ne in predefiend_ne_set:
-            from_reg = re.compile(f'(?<=(?<=\s)|(?<=\A)){ne}(?=(?=\W)|(?=\Z))', re.IGNORECASE)
+        for predefiend_ne in predefiend_ne_set:
+            from_reg = re.compile(f'(?<=(?<=\s)|(?<=\A)){predefiend_ne}(?=(?=\W)|(?=\Z))', re.IGNORECASE)
             match_objs = re.finditer(from_reg, text) 
             predefiend_detected_ne_set.update({match_obj.group() for match_obj in match_objs})
 
@@ -135,18 +146,30 @@ def _replace_ne_to_special_token(text, lang, predefiend_ne_set: set=None):
         # 예시문장:  data  .data.  SS-data df data  sf-data-sdf data.
         # data data data. 는 대치. .data. SS-data sf-data-sdf 등은 대치하지 않음 
         from_reg = re.compile(f'(?<=(?<=\s)|(?<=\A)){ne}(?=(?=\W)|(?=\Z))')  
-        to_reg = rf"'NE{idx}'"
+        # to_str = f"{ne.upper()}" if source_lang == 'en' \
+        #         else f"'{ne}'" # ko 경우.       f"'[{idx}]'"
+        to_str = f"@TAG{idx}"
 
-        text = re.sub(from_reg, to_reg, text)
+        text = re.sub(from_reg, to_str, text)
     print("After 1,2,3: ", text)
 
 
     return text, detected_ne_list
 
-def _restore_ne(translated_text, ne_list: list):
+def _restore_ne(translated_text, source_lang, ne_list: list):
     # re.sub(r"'(NER)(\d+)'", rf"{ne_list[\2]}", translated_text)  # 변수 안에 reg ㅍ현이 들어가야 하는데 어떻게 하느거지..
+    # if source_lang == 'en':
+    #     for idx, ne in enumerate(ne_list):
+    #         translated_text = translated_text.replace(ne.upper(), ne)
+
+    # elif source_lang == 'ko':
+    #     for idx, ne in enumerate(ne_list):
+    #         translated_text = re.sub(rf"'{ne}'", ne, translated_text)   #rf"'\[{idx}\]'"    
+    # else:
+    #     print("error")
+
     for idx, ne in enumerate(ne_list):
-        translated_text = re.sub(rf"'NE{idx}'", ne, translated_text)
+        translated_text = translated_text.replace(f"@TAG{idx}", ne)
 
     return translated_text
 
@@ -193,18 +216,25 @@ def translate(source_text:str, api_client_id:str, api_client_secret:str,\
 
     target_lang = sub_lang if source_lang is main_lang else main_lang
 
-    print("source_text: ", source_text)
+    print("source_text:", source_text)
     
-    term_set =  BASE_TERM_SET if term_set is None \
-                else (BASE_TERM_SET | term_set)
-    prep_source_text, ners = _replace_ne_to_special_token(source_text, source_lang, term_set)
-    print("prep_source_text: ", prep_source_text)
+    if source_lang == 'en':
+        term_set =  BASE_TERM_SET if term_set is None \
+                    else (BASE_TERM_SET | term_set)
+        prep_source_text, ners = _replace_ne_to_special_token(source_text, source_lang, term_set)
+        print("prep_source_text:", prep_source_text)
+    else:
+        prep_source_text = source_text
 
     translated_text, rescode = request_translate(prep_source_text, source_lang, target_lang, api_client_id, api_client_secret)
+    print("translated_text:", translated_text)
+
     if translated_text is None:
         return None, rescode
     else:
-        result_text = _restore_ne(translated_text, ners)
+        result_text = _restore_ne(translated_text, source_lang, ners) if source_lang == 'en'\
+            else translated_text
+        print("result_text:", result_text)
         return result_text, rescode
 
 
