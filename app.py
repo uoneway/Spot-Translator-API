@@ -5,10 +5,9 @@ from utils import load_obj
 
 
 app = Flask(__name__)  # Flask 객체 선언, 파라미터로 어플리케이션 패키지의 이름을 넣어줌.
-api = Api(app)  # Flask 객체에 Api 객체 등록
-
-api_client_info = {}
-data = {}
+api = Api(app, version='1.0', title='On the spot Translator API',  # Flask 객체에 Api 객체 등록
+        description='Click and see the translation right below which keeps named entity in the original text.',
+)
 
 
 @api.route('/translate')
