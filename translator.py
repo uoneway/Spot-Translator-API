@@ -36,6 +36,12 @@ BASE_TERM_SET = load_obj(BASE_TERM_SET_PATH)
 BASE_TERM_LIST = list(BASE_TERM_SET)
 # special_to_original_dict = {idx: value for idx, value in enumerate(BASE_TERM_SET)}
 
+## reg expression
+#  2. 문장 중간에 대문자로 시작(전체 대문자인 경우도 포함)하거나 문장(또는 전체 string)처음이지만 전체가 대문자인 경우 
+# UDF FasdFsada. Instead Unigram.[1] This Will. \n FasdFsada  에서 
+# UDF, FasdFsada, Unigram, Will, FasdFsada 등은 선택하고 Instead, This는 제외
+REG_FIND_CAPITAL_PREFIX = re.compile(r"((?<=[^\\]\w )[A-Z][\d\w]*)|((?<=(?<=\A)|(?<=\n))([A-Z]+[a-z]*){2,}(?=\s))")
+
 
 def identify_lang(text):
     max_char_num = 100
@@ -96,9 +102,7 @@ def _replace_ne_to_special_token(text, lang, predefiend_ne_set: set=None):
     # print("1. Detected NEs: ", detected_ne_set)
 
     # 2. 문장 중간에 대문자로 시작(전체 대문자인 경우도 포함)하거나 문장(또는 전체 string)처음이지만 전체가 대문자인 경우 
-    # UDF FasdFsada. Instead Unigram. This Will. \n FasdFsada 에서 
-    # UDF, FasdFsada, Unigram, Will, FasdFsada 등은 선택하고 Instead, This는 제외
-    match_objs = re.finditer(r"((?<=[^.] )[A-Z][\d\w]*)|((?<=(?<=\A)|(?<=\n))([A-Z]+[a-z]*){2,}(?=\s))", text) 
+    match_objs = re.finditer(REG_FIND_CAPITAL_PREFIX, text) 
     capital_prefix_token_set = {match_obj.group() for match_obj in match_objs}
 
     print("2. Detected Capital tokens: ", capital_prefix_token_set)
