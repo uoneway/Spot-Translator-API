@@ -176,6 +176,11 @@ def _restore_ne(translated_text, source_lang, ne_list: list):
 
     return translated_text
 
+def post_correction(text):
+    text = text.replace("@ ", " @")
+    # text = re.sub(r"(\S)(@)", "\1 \2", text)
+    return text
+
 
 def request_translate(source_text, source_lang, target_lang, api_client_id, api_client_secret):    
     data = {'text' : source_text,
@@ -236,10 +241,12 @@ def translate(source_text:str, api_client_id:str, api_client_secret:str,\
     if translated_text is None:
         return None, rescode
     else:
-        result_text = _restore_ne(translated_text, source_lang, ners) if source_lang == 'en'\
+        corrected_text = post_correction(translated_text)
+        print("corrected_text:", corrected_text)
+        result_text = _restore_ne(corrected_text, source_lang, ners) if source_lang == 'en'\
             else translated_text
         print("result_text:", result_text)
-        
+
         print(f"time : {time.time() - start:.6f}초")
         return result_text, rescode
 
