@@ -35,6 +35,7 @@ CAN_LANG = ('ko', 'en')
 BASE_TERM_SET_PATH = 'datasets/ml_term_set.pkl'
 BASE_TERM_SET = load_obj(BASE_TERM_SET_PATH)
 BASE_TERM_LIST = list(BASE_TERM_SET)
+TO_BE_REMOVED_TERM_LIST = set(['I'])
 # special_to_original_dict = {idx: value for idx, value in enumerate(BASE_TERM_SET)}
 
 ## reg expression
@@ -136,6 +137,7 @@ def _replace_ne_to_special_token(text, source_lang, predefiend_ne_set: set=None)
     print("3. Detected from predefiend_ne_set: ", predefiend_detected_ne_set)
     detected_ne_set.update(predefiend_detected_ne_set)
 
+    detected_ne_set = detected_ne_set - TO_BE_REMOVED_TERM_LIST
 
     # 1+2+3 대치. 사용자가 넣은 문장 안에서 찾은 결과이기 때문에 찾은것 그대로만(대소문자 구분 등) 찾아서 대치
     # 물론 해당 자리의 단어가 아닌 다른 자리 단어또한 대치될 위험성도 존재하나...
