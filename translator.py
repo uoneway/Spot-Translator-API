@@ -124,14 +124,15 @@ def _replace_ne_to_special_token(text, source_lang, predefiend_ne_set: set=None)
     # 3. predefiend_ne_set을 대소문자 구분없이 일치하는 token 찾아내기
     predefiend_detected_ne_set = set()
     if predefiend_ne_set is not None:
-        # start_idx = len(detected_ne_list)
-        for predefiend_ne in predefiend_ne_set:
-            from_reg = re.compile(f'(?<=(?<=\s)|(?<=\A)){predefiend_ne}(?=(?=\W)|(?=\Z))', re.IGNORECASE)
-            match_objs = re.finditer(from_reg, text) 
-            predefiend_detected_ne_set.update({match_obj.group() for match_obj in match_objs})
-
+        # for predefiend_ne in predefiend_ne_set:
+        #     from_reg = re.compile(f'(?<=(?<=\s)|(?<=\A)){predefiend_ne}(?=(?=\W)|(?=\Z))', re.IGNORECASE)
+        #     match_objs = re.finditer(from_reg, text) 
+        #     predefiend_detected_ne_set.update({match_obj.group() for match_obj in match_objs})
         
-            # to_reg = rf"'NE{idx+}'"
+        temp = '|'.join(predefiend_ne_set)
+        from_reg = re.compile(f'(?<=(?<=\s)|(?<=\A))({temp})(?=(?=\W)|(?=\Z))', re.IGNORECASE)
+        match_objs = re.finditer(from_reg, text) 
+        predefiend_detected_ne_set.update({match_obj.group() for match_obj in match_objs})
 
             # text = re.sub(from_reg, to_reg, text)
     print("3. Detected from predefiend_ne_set: ", predefiend_detected_ne_set)
