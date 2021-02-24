@@ -1,6 +1,6 @@
 import re
 import requests
-import fasttext
+# import fasttext
 # from pororo import Pororo  
 from utils import load_obj, __get_logger, gen_log_text
 
@@ -45,17 +45,17 @@ TO_BE_REMOVED_TERM_LIST = set(['I'])
 REG_FIND_CAPITAL_PREFIX = re.compile(r"((?<=[^\\]\w )[A-Z][\d\w]*)|((?<=(?<=\A)|(?<=\n))([A-Z]+[a-z]*){2,}(?=\s))")
 
 
-def identify_lang(text):
-    max_char_num = 100
-    max_token_num = 20
-    if len(text) > max_char_num:
-        text = text.split()[:max_token_num]
+# def identify_lang(text):
+#     max_char_num = 100
+#     max_token_num = 20
+#     if len(text) > max_char_num:
+#         text = text.split()[:max_token_num]
 
-    lang_detect_model = fasttext.load_model('models/fasttext_lid.176.ftz')
-    result = lang_detect_model.predict(text) #  k=2,  # '__label__en'
-    lang = result[0][0].split('__')[-1]
+#     lang_detect_model = fasttext.load_model('models/fasttext_lid.176.ftz')
+#     result = lang_detect_model.predict(text) #  k=2,  # '__label__en'
+#     lang = result[0][0].split('__')[-1]
 
-    return lang
+#     return lang
 
 
 def isKoreanIncluded(text, check_to_num=-1):
