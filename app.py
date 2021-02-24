@@ -1,8 +1,7 @@
 from flask import Flask, request  # 서버 구현을 위한 Flask 객체 import
 from flask_restx import Api, Resource  # Api 구현을 위한 Api 객체 import
 from translator import translate
-from utils import load_obj
-from utils import load_obj, __get_logger, gen_log_text
+from utils import __get_logger, gen_log_text
 
 logger = __get_logger()
 
