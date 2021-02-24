@@ -2,9 +2,9 @@ import re
 import requests
 import fasttext
 # from pororo import Pororo  
-from utils import load_obj
-import time
+from utils import load_obj, __get_logger, gen_log_text
 
+logger = __get_logger()
 
 BASE_URL = "https://openapi.naver.com/v1/papago/n2mt"
 
@@ -117,8 +117,8 @@ def _replace_ne_to_special_token(text, source_lang, predefiend_ne_set: set=None)
     # 2. 문장 중간에 대문자로 시작(전체 대문자인 경우도 포함)하거나 문장(또는 전체 string)처음이지만 전체가 대문자인 경우 
     match_objs = re.finditer(REG_FIND_CAPITAL_PREFIX, text) 
     capital_prefix_token_set = {match_obj.group() for match_obj in match_objs}
-
-    print("2. Detected Capital tokens: ", capital_prefix_token_set)
+   
+    logger.info(gen_log_text(capital_prefix_token_set))
     detected_ne_set.update(capital_prefix_token_set)
 
     # 3. predefiend_ne_set을 대소문자 구분없이 일치하는 token 찾아내기
@@ -134,15 +134,13 @@ def _replace_ne_to_special_token(text, source_lang, predefiend_ne_set: set=None)
         match_objs = re.finditer(from_reg, text) 
         predefiend_detected_ne_set.update({match_obj.group() for match_obj in match_objs})
 
-            # text = re.sub(from_reg, to_reg, text)
-    print("3. Detected from predefiend_ne_set: ", predefiend_detected_ne_set)
+    logger.info(gen_log_text(predefiend_detected_ne_set))
     detected_ne_set.update(predefiend_detected_ne_set)
 
     detected_ne_set = detected_ne_set - TO_BE_REMOVED_TERM_LIST
 
     # 1+2+3 대치. 사용자가 넣은 문장 안에서 찾은 결과이기 때문에 찾은것 그대로만(대소문자 구분 등) 찾아서 대치
     # 물론 해당 자리의 단어가 아닌 다른 자리 단어또한 대치될 위험성도 존재하나...
-    print("Before: ", text)
     detected_ne_list = list(detected_ne_set)
     for idx, ne in enumerate(detected_ne_list):
         # print(term)
@@ -155,7 +153,7 @@ def _replace_ne_to_special_token(text, source_lang, predefiend_ne_set: set=None)
         to_str = f"@TAG{idx}"
 
         text = re.sub(from_reg, to_str, text)
-    print("After 1,2,3: ", text)
+    logger.info(gen_log_text(detected_ne_list))
 
 
     return text, detected_ne_list
@@ -193,8 +191,7 @@ def request_translate(source_text, source_lang, target_lang, api_client_id, api_
         'X-Naver-Client-Id': api_client_id,
         'X-Naver-Client-Secret': api_client_secret
     }
-    print(data)
-    print(header)
+    logger.info(gen_log_text(data, header))
 
     response = requests.post(BASE_URL, headers=header, data= data)
     rescode = response.status_code
@@ -206,7 +203,7 @@ def request_translate(source_text, source_lang, target_lang, api_client_id, api_
         return translated_text, rescode
 
     else:
-        print("Error Code:" , rescode)
+        logger.error(gen_log_text(rescode))
         return None, rescode
 
 
@@ -217,49 +214,43 @@ def translate(source_text:str, api_client_id:str, api_client_secret:str,\
         단 source_text가 main_lang인 경우는 아래 sub_lang이 target language으로 역할)
     sub_lang: source_text가 main_lang인 경우 target language
     """
+    logger.info(gen_log_text(source_text))
 
-    start = time.time()
-    # Check language of source_text
-    source_lang = 'ko' if isKoreanIncluded(source_text, 100) else 'en'  # 추후 수정 필요. identify_lang(text)
+    # 1. Detect source_lang and set target_lang
+    source_lang = 'ko' if isKoreanIncluded(source_text, 200) else 'en'  # 추후 수정 필요. identify_lang(text)
     if source_lang not in CAN_LANG:
         raise ValueError
 
     target_lang = sub_lang if source_lang is main_lang else main_lang
+    logger.debug(gen_log_text(source_lang, target_lang))
 
-    print("source_text:", source_text)
     
+    # 2. Detect NE and replace it
     if source_lang == 'en':
         term_set =  BASE_TERM_SET if term_set is None \
                     else (BASE_TERM_SET | term_set)
         prep_source_text, ners = _replace_ne_to_special_token(source_text, source_lang, term_set)
-        print("prep_source_text:", prep_source_text)
     else:
         prep_source_text = source_text
+    logger.debug(gen_log_text(prep_source_text))
 
+
+    # 3. Translation
     translated_text, rescode = request_translate(prep_source_text, source_lang, target_lang, api_client_id, api_client_secret)
-    print("translated_text:", translated_text)
+    logger.debug(gen_log_text(translated_text))
+
 
     if translated_text is None:
+        logger.error(gen_log_text(rescode))
         return None, rescode
+
     else:
         corrected_text = post_correction(translated_text)
-        print("corrected_text:", corrected_text)
+        logger.debug(gen_log_text(corrected_text))
+
         result_text = _restore_ne(corrected_text, source_lang, ners) if source_lang == 'en'\
             else translated_text
-        print("result_text:", result_text)
+        logger.info(gen_log_text(result_text))
 
-        print(f"time : {time.time() - start:.6f}초")
+        # print(f"time : {time.time() - start:.6f}초")
         return result_text, rescode
-
-
-if __name__ == '__main__':
-    api_client_id = "PwtsQmgHn5h50GCthwtj"
-    api_client_secret = "zNWtEXWpt_"
-
-    # user_term_set_path = 'datasets/ml_term_set.pkl'
-    # user_term_set = load_obj(user_term_set_path)
-
-    text_ko = '오늘은 이상한 날이다' 
-    text = 'Today is a strange day.' 
-
-    print(translate(text, api_client_id, api_client_secret))

@@ -2,7 +2,9 @@ from flask import Flask, request  # 서버 구현을 위한 Flask 객체 import
 from flask_restx import Api, Resource  # Api 구현을 위한 Api 객체 import
 from translator import translate
 from utils import load_obj
+from utils import load_obj, __get_logger, gen_log_text
 
+logger = __get_logger()
 
 app = Flask(__name__)  # Flask 객체 선언, 파라미터로 어플리케이션 패키지의 이름을 넣어줌.
 api = Api(app, version='1.0', title='On the spot Translator API',  # Flask 객체에 Api 객체 등록
@@ -16,6 +18,7 @@ class Translate(Resource):
         api_client_info = request.json.get('api_client_info')
         data = request.json.get('data')
 
+        # logger.info("------------------------------------Start------------------------------------")
         translated_text, api_rescode = translate(data['source_text'], \
                                                 api_client_info['id'], api_client_info['secret'])
 
