@@ -92,6 +92,8 @@ def _replace_ne_to_special_token(text, source_lang, predefiend_ne_set: set=None)
     # - 영어에서는 italics(이탤릭체)를 주로 사용하며, 때에 따라서 boldface(굵은 글씨체), underline(밑줄) 등을 사용하기도 한다. 
     # 어떤 이는 single quotation mark(작은 따옴표) 혹은 double quotation mark(큰 따옴표)를 사용하기도 하나, 일반적으로 잘못된 용법이라고 한다.
     # 시도4: 트위터 태그를 활용한 @TAG1 방식으로.
+    # 시도5: @TAG1을 바꿀 때 @TAG11까지 바뀌는 문제 존재. 단순히 순서를 역순으로 해줄까 하다가
+    # 조사 을/를 문제까지 처리해주기 위해 @1끝자리대문자 형태로 바꿔줌
 
     # ner_set = set()
     # for ner_tuple in ner_results:
@@ -150,7 +152,7 @@ def _replace_ne_to_special_token(text, source_lang, predefiend_ne_set: set=None)
         from_reg = re.compile(f'(?<=(?<=\s)|(?<=\A)){ne}(?=(?=\W)|(?=\Z))')  
         # to_str = f"{ne.upper()}" if source_lang == 'en' \
         #         else f"'{ne}'" # ko 경우.       f"'[{idx}]'"
-        to_str = f"@TAG{idx}"
+        to_str = f"@{idx}{ne[-1].upper()}"
 
         text = re.sub(from_reg, to_str, text)
     logger.info(gen_log_text(detected_ne_list))
@@ -158,27 +160,27 @@ def _replace_ne_to_special_token(text, source_lang, predefiend_ne_set: set=None)
 
     return text, detected_ne_list
 
+def post_correction(text):
+    text = text.replace("@ ", " @")
+    # text = re.sub(r"(\S)(@)", "\1 \2", text)
+    return text
+
 def _restore_ne(translated_text, source_lang, ne_list: list):
     # re.sub(r"'(NER)(\d+)'", rf"{ne_list[\2]}", translated_text)  # 변수 안에 reg ㅍ현이 들어가야 하는데 어떻게 하느거지..
     # if source_lang == 'en':
     #     for idx, ne in enumerate(ne_list):
     #         translated_text = translated_text.replace(ne.upper(), ne)
-
     # elif source_lang == 'ko':
     #     for idx, ne in enumerate(ne_list):
     #         translated_text = re.sub(rf"'{ne}'", ne, translated_text)   #rf"'\[{idx}\]'"    
     # else:
     #     print("error")
-
+    
     for idx, ne in enumerate(ne_list):
-        translated_text = translated_text.replace(f"@TAG{idx}", ne)
+        translated_text = translated_text.replace(f"@{idx}{ne[-1].upper()}", ne)
 
     return translated_text
 
-def post_correction(text):
-    text = text.replace("@ ", " @")
-    # text = re.sub(r"(\S)(@)", "\1 \2", text)
-    return text
 
 
 def request_translate(source_text, source_lang, target_lang, api_client_id, api_client_secret):    
