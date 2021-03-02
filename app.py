@@ -1,6 +1,6 @@
 from flask import Flask, request  # 서버 구현을 위한 Flask 객체 import
 from flask_restx import Api, Resource  # Api 구현을 위한 Api 객체 import
-from translator import translate
+from translator import Translator
 from utils import __get_logger, gen_log_text
 
 logger = __get_logger()
@@ -18,8 +18,9 @@ class Translate(Resource):
         data = request.json.get('data')
 
         # logger.info("------------------------------------Start------------------------------------")
-        translated_text, api_rescode = translate(data['source_text'], \
-                                                api_client_info['id'], api_client_info['secret'])
+        translator = Translator(data['source_text'],
+                                api_client_info['id'], api_client_info['secret'])
+        translated_text, api_rescode = translator.translate()
 
         return {
             'message': {
