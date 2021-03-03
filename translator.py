@@ -3,7 +3,7 @@ import requests
 # import fasttext
 # from pororo import Pororo  
 import logging
-from utils import load_obj, __get_logger, gen_log_text
+from utils import __get_logger, gen_log_text
 
 logger = __get_logger()
 
