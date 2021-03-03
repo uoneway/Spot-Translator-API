@@ -2,6 +2,7 @@ import re
 import requests
 # import fasttext
 # from pororo import Pororo  
+import logging
 from utils import load_obj, __get_logger, gen_log_text
 
 logger = __get_logger()
@@ -51,7 +52,8 @@ class Translator:
     def __init__(self, 
             source_text:str, 
             api_client_id:str, api_client_secret:str,
-            user_defined_term_set:set=None):
+            user_defined_term_set:set=None,
+            verbose=False):
 
         self.source_text = source_text
         self.api_client_id = api_client_id
@@ -60,6 +62,11 @@ class Translator:
         self.sub_lang = 'en'
 
         self.user_defined_term_set = user_defined_term_set
+
+        if verbose:
+            logger.setLevel(logging.DEBUG)
+        else:
+            logger.setLevel(logging.INFO)
 
         logger.info(gen_log_text(self.source_text))
         # 1. Detect source_lang and set target_lang
@@ -149,7 +156,7 @@ class Translator:
         match_objs = re.finditer(Translator.REG_REPLACER, self.source_text) 
         capital_prefix_token_set = {match_obj.group() for match_obj in match_objs}
     
-        logger.info(gen_log_text(capital_prefix_token_set))
+        logger.debug(gen_log_text(capital_prefix_token_set))
         detected_ne_set.update(capital_prefix_token_set)
 
         # 3. predefiend_ne_set을 대소문자 구분없이 일치하는 token 찾아내기
@@ -165,7 +172,7 @@ class Translator:
             match_objs = re.finditer(from_reg, self.source_text) 
             predefiend_detected_ne_set.update({match_obj.group() for match_obj in match_objs})
 
-        logger.info(gen_log_text(predefiend_detected_ne_set))
+        logger.debug(gen_log_text(predefiend_detected_ne_set))
         detected_ne_set.update(predefiend_detected_ne_set)
 
         detected_ne_set = detected_ne_set - Translator.TO_BE_REMOVED_TERM_LIST
