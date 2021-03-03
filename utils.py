@@ -7,7 +7,7 @@ import logging.handlers
 from varname import argname
 
 
-def get_ml_terms():
+def scrap_terms():
     """
     Get terms related with ML from google machine-learning page
     """
@@ -31,7 +31,9 @@ def get_ml_terms():
             term_set.add(term)  # term_set.update(term_html.text.split())
 
     # print(len(term_set))
-    return term_set
+    term_list = sorted(list(term_set))
+    
+    return term_list
 
 
 def save_obj(obj, full_filename, path='.'):
@@ -116,7 +118,7 @@ def gen_log_text(*vars, title=None):  # pre_text=None,
 
 
 if __name__ == '__main__':
-    term_set = get_ml_terms()
-    save_obj(term_set, "ml_term_set.txt", './datasets')
+    term_set = scrap_terms()
+    save_obj(term_set, "google_ml_terms.txt", './datasets')
     # terms = load_obj("ml_term_set", "./datasets")
     # print(terms)
