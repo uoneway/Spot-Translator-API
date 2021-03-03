@@ -211,8 +211,8 @@ class Translator:
         return translated_text
 
 
-    def _request_translate(self):    
-        data = {'text' : self.source_text,
+    def _request_translate(self, prep_source_text):    
+        data = {'text' : prep_source_text,
                 'source' : self.source_lang,
                 'target': self.target_lang}
 
@@ -255,7 +255,7 @@ class Translator:
 
 
         # 3. Translation
-        translated_text, rescode = self._request_translate()
+        translated_text, rescode = self._request_translate(prep_source_text)
         logger.debug(gen_log_text(translated_text))
 
 
