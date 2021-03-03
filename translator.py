@@ -39,11 +39,13 @@ class Translator:
     TO_BE_REMOVED_TERM_LIST = set(['I'])
     # special_to_original_dict = {idx: value for idx, value in enumerate(BASE_TERM_SET)}
 
-    ## reg expression
-    #  2. 문장 중간에 대문자로 시작(전체 대문자인 경우도 포함)하거나 문장(또는 전체 string)처음이지만 전체가 대문자인 경우 
-    # UDF FasdFsada. Instead Unigram.[1] This Will. \n FasdFsada  에서 
+    ## REG_REPLACER
+    # UDF FasdFsada. Instead Unigram.[1] This Will. \n FasdFsada sdf_csd _sdf WILL _sdf  에서 
     # UDF, FasdFsada, Unigram, Will, FasdFsada 등은 선택하고 Instead, This는 제외
-    REG_FIND_CAPITAL_PREFIX = re.compile(r"((?<=[^\\]\w )[A-Z][\d\w]*)|((?<=(?<=\A)|(?<=\n))([A-Z]+[a-z]*){2,}(?=\s))")
+    REG_CAPITAL_PREFIX = r"((?<=[^\\]\w )[A-Z][\d\w]*)"  # 문장 중간에 대문자로 시작(전체 대문자인 경우도 포함)
+    REG_ALL_CAPITAL_AT_SENT_START = r"((?<=(?<=\A)|(?<=\n))([A-Z]+[a-z]*){2,}(?=\s))"  # 문장(또는 전체 string)처음이지만 전체가 대문자인 경우
+    REG_HAVE_UNDERBAR = r"((?<=(?<=\s)|(?<=\A))(\w*_\w*)(?=(?=\W)|(?=\Z)))"  # _를 포함한 단어인 경우
+    REG_REPLACER = rf'{REG_CAPITAL_PREFIX}|{REG_ALL_CAPITAL_AT_SENT_START}|{REG_HAVE_UNDERBAR}'
 
 
     def __init__(self, 
@@ -143,8 +145,8 @@ class Translator:
         #         detected_ne_set.add(ner_tuple[0])
         # print("1. Detected NEs: ", detected_ne_set)
 
-        # 2. 문장 중간에 대문자로 시작(전체 대문자인 경우도 포함)하거나 문장(또는 전체 string)처음이지만 전체가 대문자인 경우 
-        match_objs = re.finditer(Translator.REG_FIND_CAPITAL_PREFIX, self.source_text) 
+        # 2. Reg replacement
+        match_objs = re.finditer(Translator.REG_REPLACER, self.source_text) 
         capital_prefix_token_set = {match_obj.group() for match_obj in match_objs}
     
         logger.info(gen_log_text(capital_prefix_token_set))
