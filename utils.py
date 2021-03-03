@@ -33,13 +33,31 @@ def get_ml_terms():
     return term_set
 
 
-def save_obj(obj, filename, path='.'):  
-    with open(f'{path}/{filename}', 'wb') as f:
-        pickle.dump(obj, f)
+def save_obj(obj, full_filename, path='.'):
+    filename, extension = full_filename.split('.')
+    fullpath = f'{path}/{full_filename}'
 
-def load_obj(filename, path='.'):
-    with open(f'{path}/{filename}', 'rb') as f:
-        return pickle.load(f)
+    if extension == 'txt':
+        with open(fullpath, 'w') as f:
+            for item in obj:
+                f.write("%s\n" % item)
+
+    else:  # extension == 'pkl'
+        with open(fullpath, 'wb') as f:
+            pickle.dump(obj, f)
+
+def load_obj(full_filename, path='.'):
+    filename, extension = full_filename.split('.')
+    fullpath = f'{path}/{full_filename}'
+
+    if extension == 'txt':
+        with open(fullpath) as f:
+            lines = f.read().splitlines()
+            return lines
+
+    else:  # extension == 'pkl'
+        with open(fullpath, 'rb') as f:
+            return pickle.load(f)
 
 
 def __get_logger():
@@ -89,6 +107,6 @@ def gen_log_text(*vars, title=None):  # pre_text=None,
 
 if __name__ == '__main__':
     term_set = get_ml_terms()
-    save_obj(term_set, "ml_term_set.pkl", './datasets')
+    save_obj(term_set, "ml_term_set.txt", './datasets')
     # terms = load_obj("ml_term_set", "./datasets")
     # print(terms)
