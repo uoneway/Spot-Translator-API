@@ -34,9 +34,6 @@ class Translator:
     # }
     # print("End to load Pororo NER models!")
 
-    BASE_TERM_SET_PATH = 'datasets/ml_term_set.pkl'
-    BASE_TERM_SET = load_obj(BASE_TERM_SET_PATH)
-    BASE_TERM_LIST = list(BASE_TERM_SET)
     TO_BE_REMOVED_TERM_LIST = set(['I'])
     # special_to_original_dict = {idx: value for idx, value in enumerate(BASE_TERM_SET)}
 
@@ -52,7 +49,7 @@ class Translator:
     def __init__(self, 
             source_text:str, 
             api_client_id:str, api_client_secret:str,
-            user_defined_term_set:set=None,
+            term_en_list:list=None,
             verbose=False):
 
         self.source_text = source_text
@@ -61,7 +58,7 @@ class Translator:
         self.main_lang = 'ko'
         self.sub_lang = 'en'
 
-        self.user_defined_term_set = user_defined_term_set
+        self.term_en_list = term_en_list
 
         if verbose:
             logger.setLevel(logging.DEBUG)
@@ -112,7 +109,8 @@ class Translator:
         return 'ko' if isKorean else 'en' 
 
 
-    def _replace_ne_to_special_token(self):
+    @staticmethod
+    def _replace_ne_to_special_token(text, ne_list):
         """
         시도1:처음에는 ner 단어를 활용해서 대치하려고 했으나 
         어떤 경우에는 그 기호 안에 있는 ner도 해석해버리는 경우가 많고, 다른 단어 해석에도 영향을 미칠 수 있음에 따라
@@ -153,7 +151,7 @@ class Translator:
         # print("1. Detected NEs: ", detected_ne_set)
 
         # 2. Reg replacement
-        match_objs = re.finditer(Translator.REG_REPLACER, self.source_text) 
+        match_objs = re.finditer(Translator.REG_REPLACER, text) 
         capital_prefix_token_set = {match_obj.group() for match_obj in match_objs}
     
         logger.debug(gen_log_text(capital_prefix_token_set))
@@ -161,15 +159,15 @@ class Translator:
 
         # 3. predefiend_ne_set을 대소문자 구분없이 일치하는 token 찾아내기
         predefiend_detected_ne_set = set()
-        if self.user_defined_term_set is not None:
-            # for predefiend_ne in self.user_defined_term_set:
+        if ne_list is not None:
+            # for predefiend_ne in ne_list:
             #     from_reg = re.compile(f'(?<=(?<=\s)|(?<=\A)){predefiend_ne}(?=(?=\W)|(?=\Z))', re.IGNORECASE)
             #     match_objs = re.finditer(from_reg, text) 
             #     predefiend_detected_ne_set.update({match_obj.group() for match_obj in match_objs})
             
-            temp = '|'.join(self.user_defined_term_set)
-            from_reg = re.compile(f'(?<=(?<=\s)|(?<=\A))({temp})(?=(?=\W)|(?=\Z))', re.IGNORECASE)
-            match_objs = re.finditer(from_reg, self.source_text) 
+            joined_term = '|'.join(ne_list)
+            from_reg = re.compile(f'(?<=(?<=\s)|(?<=\A))({joined_term})(?=(?=\W)|(?=\Z))', re.IGNORECASE)
+            match_objs = re.finditer(from_reg, text) 
             predefiend_detected_ne_set.update({match_obj.group() for match_obj in match_objs})
 
         logger.debug(gen_log_text(predefiend_detected_ne_set))
@@ -179,7 +177,7 @@ class Translator:
 
         # 1+2+3 대치. 사용자가 넣은 문장 안에서 찾은 결과이기 때문에 찾은것 그대로만(대소문자 구분 등) 찾아서 대치
         # 물론 해당 자리의 단어가 아닌 다른 자리 단어또한 대치될 위험성도 존재하나...
-        text = self.source_text
+        prep_text = text
         detected_ne_list = list(detected_ne_set)
         for idx, ne in enumerate(detected_ne_list):
             # print(term)
@@ -191,10 +189,10 @@ class Translator:
             #         else f"'{ne}'" # ko 경우.       f"'[{idx}]'"
             to_str = f"@{idx}{ne[-1].upper()}"
 
-            text = re.sub(from_reg, to_str, text)
+            prep_text = re.sub(from_reg, to_str, prep_text)
         logger.info(gen_log_text(detected_ne_list))
 
-        return text, detected_ne_list
+        return prep_text, detected_ne_list
 
     @staticmethod
     def _post_correction(translated_text):
@@ -255,9 +253,7 @@ class Translator:
 
         # 2. Detect NE and replace it
         if self.source_lang == 'en':
-            term_set =  Translator.BASE_TERM_SET if self.user_defined_term_set is None \
-                        else (Translator.BASE_TERM_SET | self.user_defined_term_set)
-            prep_source_text, ners = self._replace_ne_to_special_token()
+            prep_source_text, ners = Translator._replace_ne_to_special_token(self.source_text, self.term_en_list)
         else:
             prep_source_text = self.source_text
         logger.debug(gen_log_text(prep_source_text))
