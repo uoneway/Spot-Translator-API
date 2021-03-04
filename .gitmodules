@@ -1,0 +1,4 @@
+[submodule "lib/py-googletrans"]
+	path = lib/py-googletrans
+	url = https://github.com/alainrouillon/py-googletrans.git
+	branch = feature/enhance-use-of-direct-api
