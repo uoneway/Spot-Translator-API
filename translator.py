@@ -46,7 +46,7 @@ class Translator:
     ## REG_REPLACER
     # UDF FasdFsada. Instead Unigram.[1] This Will. \n FasdFsada sdf_csd _sdf WILL _sdf  에서 
     # UDF, FasdFsada, Unigram, Will, FasdFsada 등은 선택하고 Instead, This는 제외
-    REG_CAPITAL_PREFIX = r"((?<=[^\\]\w )[A-Z][\d\w]*)"  # 문장 중간에 대문자로 시작(전체 대문자인 경우도 포함)
+    REG_CAPITAL_PREFIX = r"((?<=[^\\]\w )([a-zA-Z0-9]*[-])*[A-Z][\d\w]*)([-][a-zA-Z0-9]*)*"  # 문장 중간에 대문자로 시작(전체 대문자인 경우도 포함) + 대문자단어와 -로 연결되어 있는 경우까지 포함
     REG_ALL_CAPITAL_AT_SENT_START = r"((?<=(?<=\A)|(?<=\n)|(?<=\.\s))([A-Z]+[a-z]*){2,}(?=\s))"  # 문장(또는 전체 string)처음이지만 전체가 대문자인 경우. 처음에 나오더라도 A와 같이 한 글자인 경우는 제외
     REG_HAVE_UNDERSCORE = r"((?<=(?<=\s)|(?<=\A))(\w*([_]\w*)+)(?=(?=\W)|(?=\Z)))"  # _ 를 포함한 단어인 경우. (-도 포함했더니.. "pre-trained입니다." 식으로 해석을 방해하는 경우가 생김)
     REG_REPLACER = rf'{REG_CAPITAL_PREFIX}|{REG_ALL_CAPITAL_AT_SENT_START}|{REG_HAVE_UNDERSCORE}'
@@ -160,10 +160,10 @@ class Translator:
 
         # 2. Reg replacement
         match_objs = re.finditer(Translator.REG_REPLACER, text) 
-        capital_prefix_token_set = {match_obj.group() for match_obj in match_objs}
+        reg_detected_ne_set = {match_obj.group() for match_obj in match_objs}
     
-        logger.debug(gen_log_text(capital_prefix_token_set))
-        detected_ne_set.update(capital_prefix_token_set)
+        logger.debug(gen_log_text(reg_detected_ne_set))
+        detected_ne_set.update(reg_detected_ne_set)
 
         # 3. predefiend_ne_set을 대소문자 구분없이 일치하는 token 찾아내기
         predefiend_detected_ne_set = set()
