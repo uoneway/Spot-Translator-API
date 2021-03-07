@@ -10,10 +10,14 @@ api = Api(app, version='1.0', title='On the spot Translator API',  # Flask Í∞ùÏ≤
         description='Click and see the translation right below which keeps named entity in the original text.',
 )
 
-BASE_TERM_EN_PATH = 'datasets/terms_en.txt'  # 'datasets/ml_term_set.pkl'
-BASE_TERM_EN_LIST = load_obj(BASE_TERM_EN_PATH)
-BASE_TERM_EN_SET = set(BASE_TERM_EN_LIST)
-
+BASE_TERM_EN_PATHES = ['datasets/ml_terms_google_picked.txt',
+                        'datasets/ml_terms_manual.txt'
+]
+BASE_TERM_EN_SET = set()
+for filename in BASE_TERM_EN_PATHES:
+    BASE_TERM_EN_LIST = load_obj(filename)
+    BASE_TERM_EN_SET.update(BASE_TERM_EN_LIST)
+BASE_TERM_EN_LIST = list(BASE_TERM_EN_SET)
 
 @api.route('/translate')
 class Translate(Resource):

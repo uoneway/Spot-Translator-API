@@ -149,7 +149,6 @@ cost
 counterfactual fairness
 coverage bias
 crash blossom
-critic
 cross-entropy
 cross-validation
 custom Estimator
@@ -211,7 +210,6 @@ federated learning
 feedback loop
 feedforward neural network
 few-shot learning
-fine tuning
 forget gate
 full softmax
 fully connected layer
@@ -264,6 +262,7 @@ labeled example
 lambda
 landmarks
 layer
+layers
 learning rate
 least squares regression
 linear model
@@ -276,7 +275,6 @@ loss curve
 loss surface
 machine learning
 majority class
-math
 matplotlib
 matrix factorization
 metric
@@ -284,7 +282,6 @@ mini-batch
 mini-batch stochastic gradient descent
 minimax loss
 minority class
-model
 model capacity
 model function
 model training
@@ -321,7 +318,6 @@ partial derivative
 participation bias
 partitioning strategy
 perceptron
-performance
 perplexity
 pipeline
 policy
@@ -331,7 +327,6 @@ post-processing
 pre-trained model
 precision
 precision-recall curve
-prediction
 prediction bias
 predictive parity
 predictive rate parity
@@ -360,7 +355,6 @@ reinforcement learning
 replay buffer
 reporting bias
 representation
-return
 reward
 ridge regularization
 root directory
@@ -402,7 +396,6 @@ stochastic gradient descent
 stride
 structural risk minimization
 subsampling
-summary
 supervised machine learning
 synthetic feature
 tabular Q-learning
@@ -420,8 +413,6 @@ tf.metrics
 tf.session
 time series analysis
 timestep
-to a sensitive attribute
-tower
 training
 training set
 trajectory
@@ -436,10 +427,9 @@ underfitting
 unlabeled example
 unsupervised machine learning
 upweighting
-user matrix
+matrix
 validation
 validation set
 vanishing gradient problem
 weight
 wide model
-width
