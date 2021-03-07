@@ -220,7 +220,7 @@ class Translator:
         # else:
         #     print("error")
         
-        for idx, ne in enumerate(ne_list):
+        for idx, ne in reversed(list(enumerate(ne_list))):  # 순서대로 하면 @11N 이 @1 대체할 때 대체되어버림. 그래서 역순으로 
             translated_text = translated_text.replace(f"@{idx}{ne[-1].upper()}", ne)
 
         return translated_text
