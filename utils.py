@@ -118,6 +118,13 @@ def gen_log_text(*vars, title=None):  # pre_text=None,
     return f"{text}"
 
 
+def get_last_char(token):
+    for char in reversed(token):
+        if char.isalpha():  #not char.isdigit():
+            return char
+    return 'T'
+
+
 if __name__ == '__main__':
     now = datetime.today().strftime("%Y%m%d-%H%M")
     term_set = scrap_terms()

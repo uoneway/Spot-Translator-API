@@ -9,7 +9,7 @@ sys.path.append('lib/py-googletrans')
 from googletrans import Translator
 
 import logging
-from utils import __get_logger, gen_log_text
+from utils import __get_logger, gen_log_text, get_last_char
 
 logger = __get_logger()
 
@@ -195,7 +195,7 @@ class Translator:
             from_reg = re.compile(f'(?<=(?<=\s)|(?<=\A)){ne}(?=(?=\W)|(?=\Z))')  
             # to_str = f"{ne.upper()}" if source_lang == 'en' \
             #         else f"'{ne}'" # ko 경우.       f"'[{idx}]'"
-            to_str = f"@{idx}{ne[-1].upper()}"
+            to_str = f"@{idx}{get_last_char(ne).upper()}"
 
             prep_text = re.sub(from_reg, to_str, prep_text)
         logger.info(gen_log_text(detected_ne_list))
@@ -221,7 +221,7 @@ class Translator:
         #     print("error")
         
         for idx, ne in reversed(list(enumerate(ne_list))):  # 순서대로 하면 @11N 이 @1 대체할 때 대체되어버림. 그래서 역순으로 
-            translated_text = translated_text.replace(f"@{idx}{ne[-1].upper()}", ne)
+            translated_text = translated_text.replace(f"@{idx}{get_last_char(ne).upper()}", ne)
 
         return translated_text
 
