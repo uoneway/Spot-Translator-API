@@ -165,7 +165,7 @@ class Translator:
         logger.debug(gen_log_text(reg_detected_ne_set))
         detected_ne_set.update(reg_detected_ne_set)
 
-        # 3. predefiend_ne_set을 대소문자 구분없이 일치하는 token 찾아내기
+        # 3. predefiend_ne_set을 대소문자 구분없이 명확히 일치하는 token(또는 그 token을 포함하여 -로 연결되어 있는 token 전체 ) 찾아내기
         predefiend_detected_ne_set = set()
         if ne_list is not None:
             # for predefiend_ne in ne_list:
@@ -174,7 +174,7 @@ class Translator:
             #     predefiend_detected_ne_set.update({match_obj.group() for match_obj in match_objs})
             
             joined_term = '|'.join(ne_list)
-            from_reg = re.compile(f'(?<=(?<=\s)|(?<=\A))({joined_term})(?=(?=\W)|(?=\Z))', re.IGNORECASE)
+            from_reg = re.compile(f'(?<=(?<=\s)|(?<=\A))([a-zA-Z0-9]*[-])*({joined_term})([-][a-zA-Z0-9]*)*(?=(?=\W)|(?=\Z))', re.IGNORECASE)
             match_objs = re.finditer(from_reg, text) 
             predefiend_detected_ne_set.update({match_obj.group() for match_obj in match_objs})
 
