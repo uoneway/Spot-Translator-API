@@ -33,7 +33,7 @@ class Translate(Resource):
         translator = Translator(source_text=data['source_text'],
                                 api_client_id=api_client_info['id'], api_client_secret=api_client_info['secret'],
                                 term_en_list=term_en_list,
-                                verbose=True)
+                                )
         translated_text, api_rescode = translator.translate()
 
         return {
