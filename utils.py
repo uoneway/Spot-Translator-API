@@ -5,6 +5,7 @@ import re
 import logging
 import logging.handlers
 from varname import argname
+from datetime import datetime
 
 
 def scrap_terms():
@@ -118,7 +119,8 @@ def gen_log_text(*vars, title=None):  # pre_text=None,
 
 
 if __name__ == '__main__':
+    now = datetime.today().strftime("%Y%m%d-%H%M")
     term_set = scrap_terms()
-    save_obj(term_set, "google_ml_terms.txt", './datasets')
+    save_obj(term_set, f"raw/ml_terms_google_{now}.txt", './datasets')
     # terms = load_obj("ml_term_set", "./datasets")
     # print(terms)
