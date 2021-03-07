@@ -30,10 +30,12 @@ class Translate(Resource):
         # term_en_set =  Translator.BASE_TERM_EN_SET if self.user_defined_term_set is None \
         #     else (Translator.BASE_TERM_EN_SET | self.user_defined_term_set)
         term_en_list = BASE_TERM_EN_LIST
+
         translator = Translator(source_text=data['source_text'],
                                 api_client_id=api_client_info['id'], api_client_secret=api_client_info['secret'],
                                 term_en_list=term_en_list,
                                 )
+
         translated_text, api_rescode = translator.translate()
 
         return {

@@ -28,11 +28,6 @@ Werkzeug==1.0.1
 zipp==3.4.0
 varname==0.6.2
 
-# for googletrans
-# current googletrans public version have a problem AttributeError: 'NoneType' object has no attribute 'group'
-# So manual install is needed
-# https://stackoverflow.com/questions/52455774/googletrans-stopped-working-with-error-nonetype-object-has-no-attribute-group/52456197
-httpx==0.13.3
 
 # pip install flask
 # pip install flask_restx
