@@ -2,13 +2,19 @@ import re
 import requests
 # import fasttext
 # from pororo import Pororo  
+
+# for googletrans
+import sys
+sys.path.append('lib/py-googletrans')
+from googletrans import Translator
+
 import logging
 from utils import __get_logger, gen_log_text
 
 logger = __get_logger()
 
 class Translator:
-    BASE_URL = "https://openapi.naver.com/v1/papago/n2mt"
+    REQUEST_URL_DICT = {'papago': "https://openapi.naver.com/v1/papago/n2mt",}
 
     # PAPAGO_CAN_LANG = {  # https://developers.naver.com/docs/papago/papago-nmt-api-reference.md
     #         'ko': ('en', 'ja', 'zh-CN', 'zh-TW', 'vi', 'id', 'th', 'de', 'ru', 'es', 'it', 'fr'),
@@ -48,11 +54,13 @@ class Translator:
 
     def __init__(self, 
             source_text:str, 
-            api_client_id:str, api_client_secret:str,
+            service_type:str='papago',
+            api_client_id:str=None, api_client_secret:str=None,
             term_en_list:list=None,
             verbose=False):
 
         self.source_text = source_text
+        self.service_type = service_type
         self.api_client_id = api_client_id
         self.api_client_secret = api_client_secret
         self.main_lang = 'ko'
@@ -218,7 +226,7 @@ class Translator:
         return translated_text
 
 
-    def _request_translate(self, prep_source_text):    
+    def _request_papago_translate(self, prep_source_text):
         data = {'text' : prep_source_text,
                 'source' : self.source_lang,
                 'target': self.target_lang}
@@ -230,7 +238,7 @@ class Translator:
         }
         logger.info(gen_log_text(data, header))
 
-        response = requests.post(Translator.BASE_URL, headers=header, data= data)
+        response = requests.post(Translator.REQUEST_URL_DICT['papago'], headers=header, data= data)
         rescode = response.status_code
 
         if(rescode==200):
@@ -242,6 +250,12 @@ class Translator:
         else:
             logger.error(gen_log_text(rescode))
             return None, rescode
+
+    def _request_google_translate(self, prep_source_text):
+        translator = Translator(service_urls=['translate.googleapis.com'])
+        translated_text = translator.translate(prep_source_text, src=self.source_lang, dest=self.target_lang)
+
+        return translated_text
 
 
     def translate(self): 
@@ -260,7 +274,7 @@ class Translator:
 
 
         # 3. Translation
-        translated_text, rescode = self._request_translate(prep_source_text)
+        translated_text, rescode = self._request_papago_translate(prep_source_text)
         logger.debug(gen_log_text(translated_text))
 
 
