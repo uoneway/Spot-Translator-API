@@ -48,8 +48,8 @@ class Translator:
     # UDF, FasdFsada, Unigram, Will, FasdFsada 등은 선택하고 Instead, This는 제외
     REG_CAPITAL_PREFIX = r"((?<=[^\\]\w )[A-Z][\d\w]*)"  # 문장 중간에 대문자로 시작(전체 대문자인 경우도 포함)
     REG_ALL_CAPITAL_AT_SENT_START = r"((?<=(?<=\A)|(?<=\n)|(?<=\.\s))([A-Z]+[a-z]*){2,}(?=\s))"  # 문장(또는 전체 string)처음이지만 전체가 대문자인 경우. 처음에 나오더라도 A와 같이 한 글자인 경우는 제외
-    REG_HAVE_UNDERBAR = r"((?<=(?<=\s)|(?<=\A))(\w*_\w*)(?=(?=\W)|(?=\Z)))"  # _를 포함한 단어인 경우
-    REG_REPLACER = rf'{REG_CAPITAL_PREFIX}|{REG_ALL_CAPITAL_AT_SENT_START}|{REG_HAVE_UNDERBAR}'
+    REG_HAVE_UNDERSCORE = r"((?<=(?<=\s)|(?<=\A))(\w*([_]\w*)+)(?=(?=\W)|(?=\Z)))"  # _ 를 포함한 단어인 경우. (-도 포함했더니.. "pre-trained입니다." 식으로 해석을 방해하는 경우가 생김)
+    REG_REPLACER = rf'{REG_CAPITAL_PREFIX}|{REG_ALL_CAPITAL_AT_SENT_START}|{REG_HAVE_UNDERSCORE}'
 
 
     def __init__(self, 
