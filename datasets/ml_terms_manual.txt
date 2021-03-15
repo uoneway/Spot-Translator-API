@@ -5,3 +5,8 @@ self-attention masks
 mask
 state-of-the-art
 BLEU
+residual attention
+feed forward
+hidden size
+hidden layer
+bert
