@@ -166,7 +166,9 @@ class Translator:
             #     predefiend_detected_ne_set.update({match_obj.group() for match_obj in match_objs})
             
             joined_term = '|'.join(ne_list)
-            from_reg = re.compile(f'(?<=(?<=\s)|(?<=\A))([a-zA-Z0-9]*[-])*({joined_term})([-][a-zA-Z0-9]*)*(?=(?=\W)|(?=\Z))', re.IGNORECASE)
+            from_reg = re.compile(f'(?<=(?<=\s)|(?<=\A))([a-zA-Z0-9]*[-])*('
+                                + joined_term 
+                                + ')(es|s){,1}([-][a-zA-Z0-9]*)*(?=(?=\W)|(?=\Z))', re.IGNORECASE)
             match_objs = re.finditer(from_reg, text) 
             predefiend_detected_ne_set.update({match_obj.group() for match_obj in match_objs})
 
