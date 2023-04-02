@@ -1,13 +1,18 @@
-# import fasttext
-# from pororo import Pororo
 import logging
 import re
 
 import requests
 
-from utils import __get_logger, gen_log_text, get_last_char
+from src.common.base import __get_logger, gen_log_text
 
 logger = __get_logger()
+
+
+def get_last_char(token):
+    for char in reversed(token):
+        if char.isalpha():  # not char.isdigit():
+            return char
+    return "T"
 
 
 class Translator:
@@ -177,7 +182,7 @@ class Translator:
             to_str = f"@{idx}{get_last_char(ne).upper()}"
 
             prep_text = re.sub(from_reg, to_str, prep_text)
-        logger.info(gen_log_text(detected_ne_list))
+        logger.debug(gen_log_text(detected_ne_list))
 
         return prep_text, detected_ne_list
 
@@ -212,7 +217,7 @@ class Translator:
             "X-Naver-Client-Id": self.api_client_id,
             "X-Naver-Client-Secret": self.api_client_secret,
         }
-        logger.info(gen_log_text(data, header))
+        logger.info(gen_log_text(data, self.api_client_id))
 
         response = requests.post(Translator.BASE_URL, headers=header, data=data)
         rescode = response.status_code

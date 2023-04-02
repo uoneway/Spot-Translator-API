@@ -1,8 +1,11 @@
-attrs~=22.2
-varname==0.6.2
-beautifulsoup4~=4.12
+varname~=0.6.5
 requests
 
 # FastAPI
-fastapi
+fastapi~=0.95.0
 uvicorn
+
+# develop
+orjson
+chardet
+beautifulsoup4~=4.12
