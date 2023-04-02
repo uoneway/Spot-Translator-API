@@ -1,18 +1,23 @@
+from pathlib import Path
+
 from fastapi import FastAPI, Request
 from fastapi.encoders import jsonable_encoder
 from fastapi.responses import JSONResponse
 
-from translator import Translator
-from utils import __get_logger, load_obj
+from src.common.base import __get_logger
+from src.common.utils import load_obj
+from src.translate.translator import Translator
 
 logger = __get_logger()
 
 app = FastAPI(title="On the spot Translator API", version="1.0")
+# uvicorn main:app --reload
 
-BASE_TERM_EN_PATHES = ["datasets/ml_terms_google_picked.txt", "datasets/ml_terms_manual.txt"]
+TERM_EN_DIR = Path("src/translate/term_set")
+BASE_TERM_EN_FILES = ["ml_terms_google_picked.txt", "ml_terms_manual.txt"]
 BASE_TERM_EN_SET = set()
-for filename in BASE_TERM_EN_PATHES:
-    BASE_TERM_EN_LIST = load_obj(filename)
+for filename in BASE_TERM_EN_FILES:
+    BASE_TERM_EN_LIST = load_obj(TERM_EN_DIR / filename)
     BASE_TERM_EN_SET.update(BASE_TERM_EN_LIST)
 BASE_TERM_EN_LIST = list(BASE_TERM_EN_SET)
 
