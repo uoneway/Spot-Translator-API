@@ -1,13 +1,14 @@
 import logging
+import logging.handlers
 
 from varname import argname
 
+logger = logging.getLogger("logger")
 
-def __get_logger():
-    """로거 인스턴스 반환"""
 
-    logger = logging.getLogger("logger")
-    logger.setLevel(logging.DEBUG)  # 로그 레벨 정의
+def set_logger(logger):
+    logger.setLevel(logging.INFO)
+    logger.setLevel(logging.DEBUG)
 
     # Check handler exists
     if len(logger.handlers) > 0:
@@ -35,7 +36,8 @@ def __get_logger():
     logger.addHandler(stream_handler)
     logger.addHandler(file_handler)
 
-    return logger
+
+set_logger(logger)
 
 
 def gen_log_text(*vars, title=None):  # pre_text=None,
