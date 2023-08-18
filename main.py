@@ -23,7 +23,7 @@ BASE_TERM_EN_LIST = list(BASE_TERM_EN_SET)
 
 
 @app.post("/translate")
-def translate(translate_request: TranslateRequest, user_option: Optional[UserOption] = None):
+async def translate(translate_request: TranslateRequest, user_option: Optional[UserOption] = None):
     logger.info(f"{'-'*10} New request: {asdict(translate_request)} {'-'*10}")
     logger.debug(f"User option: {asdict(user_option)}")
 
@@ -38,11 +38,11 @@ def translate(translate_request: TranslateRequest, user_option: Optional[UserOpt
     # term_en_list = BASE_TERM_EN_LIST
 
     tgt_lang = "ko"  # translate_request.tgt_lang
-    translated_text, status_msg = translator.run(src_text=translate_request.src_text, tgt_lang=tgt_lang)
+    translated_text, status_msg = await translator.run(src_text=translate_request.src_text, tgt_lang=tgt_lang)
     if translated_text is None and not isinstance(translator, GoogleTranslator):
         logger.info(f"{user_option.translator_client_info.translator_type} API failed. Try Google API")
         translator = GoogleTranslator()
-        translated_text, status_msg = translator.run(src_text=translate_request.src_text, tgt_lang=tgt_lang)
+        translated_text, status_msg = await translator.run(src_text=translate_request.src_text, tgt_lang=tgt_lang)
 
         if translated_text is None:
             logger.info("Google API also failed")

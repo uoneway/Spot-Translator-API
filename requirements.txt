@@ -1,5 +1,5 @@
 varname~=0.6.5
-requests
+httpx
 googletrans>=3.1.0a0
 
 # FastAPI
