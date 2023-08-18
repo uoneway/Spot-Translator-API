@@ -1,10 +1,13 @@
+from dataclasses import asdict
 from pathlib import Path
+from typing import Optional
 
-from fastapi import FastAPI, Request
+from fastapi import FastAPI
 from fastapi.encoders import jsonable_encoder
 from fastapi.responses import JSONResponse
 
 from src.common.base import logger
+from src.common.models import TranslateRequest, TranslatorType, UserOption
 from src.common.utils import load_obj
 from src.translate.translator import GoogleTranslator, PapagoTranslator
 
@@ -20,36 +23,39 @@ BASE_TERM_EN_LIST = list(BASE_TERM_EN_SET)
 
 
 @app.post("/translate")
-async def translate(request: Request):
-    logger.info("------------------------------------Get a new request------------------------------------")
+def translate(translate_request: TranslateRequest, user_option: Optional[UserOption] = None):
+    logger.info(f"{'-'*10} New request: {asdict(translate_request)} {'-'*10}")
+    logger.debug(f"User option: {asdict(user_option)}")
 
-    req_info = await request.json()
-    api_client_info = req_info.get("api_client_info")
-    data = req_info.get("data")
-    main_tgt_lang = data.get("main_tgt_lang", "ko")
-    sub_tgt_lang = data.get("sub_tgt_lang", "en")
+    match user_option.translator_client_info.translator_type:
+        case TranslatorType.papago:
+            translator = PapagoTranslator(user_option)
+        case TranslatorType.google | _:
+            translator = GoogleTranslator()
 
     # term_en_set =  Translator.BASE_TERM_EN_SET if self.user_defined_term_set is None \
     #     else (Translator.BASE_TERM_EN_SET | self.user_defined_term_set)
     # term_en_list = BASE_TERM_EN_LIST
 
-    translator = PapagoTranslator(
-        api_client_id=api_client_info["id"],
-        api_client_secret=api_client_info["secret"],
-        main_tgt_lang=main_tgt_lang,
-        sub_tgt_lang=sub_tgt_lang
-        # term_en_list=term_en_list,
-    )
-
-    translated_text, status_msg = translator.run(src_text=data["source_text"], tgt_lang="ko")  # data["tgt_lang"]
-    if translated_text is None:
+    tgt_lang = "ko"  # translate_request.tgt_lang
+    translated_text, status_msg = translator.run(src_text=translate_request.src_text, tgt_lang=tgt_lang)
+    if translated_text is None and not isinstance(translator, GoogleTranslator):
+        logger.info(f"{user_option.translator_client_info.translator_type} API failed. Try Google API")
         translator = GoogleTranslator()
-        translated_text, status_msg = translator.run(src_text=data["source_text"], tgt_lang="ko")
+        translated_text, status_msg = translator.run(src_text=translate_request.src_text, tgt_lang=tgt_lang)
+
+        if translated_text is None:
+            logger.info("Google API also failed")
+            translated_text = None
+            status_msg = "API failed"
+            return JSONResponse(
+                content={"message": {"result": {"translatedText": translated_text, "api_rescode": status_msg}}},
+                status_code=400,
+            )
 
     response_dict = {"message": {"result": {"translatedText": translated_text, "api_rescode": status_msg}}}
     response_json = jsonable_encoder(response_dict)
-
-    return JSONResponse(content=response_json)
+    return JSONResponse(content=response_json, status_code=200)
 
 
 if __name__ == "__main__":
