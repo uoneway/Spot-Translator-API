@@ -7,6 +7,7 @@ import requests
 from googletrans import Translator as GoogleTrans
 
 from src.common.base import gen_log_text, logger
+from src.common.models import UserOption
 from src.translate.utils import isKoreanIncluded
 
 
@@ -15,22 +16,19 @@ class Translator(metaclass=ABCMeta):
 
     def __init__(
         self,
-        api_client_id: str,
-        api_client_secret: str,
-        main_tgt_lang: str,
-        sub_tgt_lang: str,
+        user_option: Optional[UserOption],
         term_en_list: list = None,
     ):
-        self.api_client_id = api_client_id
-        self.api_client_secret = api_client_secret
-
         """
         main_lang: 사용자는 원문 클릭 시, 번역되어 보이는 언어(target language).
             단 source_text가 main_lang인 경우는 아래 sub_lang이 target language으로 역할)
         sub_lang: source_text가 main_lang인 경우 target language
         """
-        self.main_tgt_lang = main_tgt_lang
-        self.sub_tgt_lang = sub_tgt_lang
+        self.api_key = user_option.translator_client_info.api_key
+        self.secret_key = user_option.translator_client_info.secret_key
+
+        self.main_tgt_lang = user_option.main_tgt_lang
+        self.sub_tgt_lang = user_option.sub_tgt_lang
         # self.term_en_list = term_en_list
 
     @staticmethod
@@ -118,10 +116,10 @@ class PapagoTranslator(Translator):
         data = {"text": src_text, "source": src_lang, "target": tgt_lang}
         header = {
             # 'content-type': 'application/json; charset=UTF-8',
-            "X-Naver-Client-Id": self.api_client_id,
-            "X-Naver-Client-Secret": self.api_client_secret,
+            "X-Naver-Client-Id": self.api_key,
+            "X-Naver-Client-Secret": self.secret_key,
         }
-        logger.debug(gen_log_text(data, self.api_client_id))
+        logger.debug(gen_log_text(data, self.api_key))
 
         response = requests.post(PapagoTranslator.REQ_URL, headers=header, data=data)
         status_code = response.status_code
@@ -138,21 +136,33 @@ class PapagoTranslator(Translator):
             return None, status_msg
 
     def convert_status_code_to_msg(status_code):
-        # https://developers.naver.com/docs/common/openapiguide/errorcode.md#%EC%98%A4%EB%A5%98-%EB%A9%94%EC%8B%9C%EC%A7%80-%ED%98%95%EC%8B%9D
+        # https://developers.naver.com/docs/common/openapiguide/
+        # errorcode.md#%EC%98%A4%EB%A5%98-%EB%A9%94%EC%8B%9C%EC%A7%80-%ED%98%95%EC%8B%9D
 
-        msg_forForDetail = "</br>For more details, click <a target='_blank' href='https://uoneway.notion.site/On-the-spot-Translator-1826d87aa2d845d093793cee0ca11b29' style='color: #008eff; pointer-events: all;'><u>here</u></a>"
+        msg_forForDetail = (
+            "</br>For more details, click"
+            + "<a target='_blank' "
+            + "href='https://uoneway.notion.site/On-the-spot-Translator-1826d87aa2d845d093793cee0ca11b29'"
+            + " style='color: #008eff; pointer-events: all;'><u>here</u></a>"
+        )
         if status_code == 401:
             msg = (
-                "🔧 Authentication failed: </br>Please make sure you enter correct 'Naver API application info(Client ID and Client Secret)' in the option popup."
+                "🔧 Authentication failed: </br>"
+                + "Please make sure you enter correct 'Naver API application info(Client ID and Client Secret)'"
+                + " in the option popup."
                 + msg_forForDetail
             )
         elif status_code == 403:
             msg = (
-                "🔧 You don't have the 'Papago Translation API' permission: </br>Please add 'Papago Translation' on 'API setting' tab in the Naver Developer Center website."
+                "🔧 You don't have the 'Papago Translation API' permission: </br>"
+                + "Please add 'Papago Translation' on 'API setting' tab in the Naver Developer Center website."
                 + msg_forForDetail
             )
         elif status_code == 429:
-            msg = "⏳ Used up all your daily usage: </br>This translator use Naver Papago API which provide only 10,000 characters translation per a day."
+            msg = (
+                "⏳ Used up all your daily usage: </br>"
+                + "This translator use Naver Papago API which provide only 10,000 characters translation per a day."
+            )
         else:
             msg = "❗ Error: </br>Some problem occured at Naver Papago API. Please try again in a few minutes"
 
