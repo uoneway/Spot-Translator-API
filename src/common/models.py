@@ -17,13 +17,14 @@ class StrEnum(str, Enum):
 class TranslatorType(StrEnum):
     papago: str = auto()
     google: str = auto()
+    deepl: str = auto()
 
 
 @dataclass
 class TranslatorClientInfo:
     translator_type: TranslatorType
-    api_key: str
     secret_key: str
+    api_key: Optional[str] = None
 
 
 @dataclass

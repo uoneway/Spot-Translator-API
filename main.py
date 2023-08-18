@@ -9,7 +9,7 @@ from fastapi.responses import JSONResponse
 from src.common.base import logger
 from src.common.models import TranslateRequest, TranslatorType, UserOption
 from src.common.utils import load_obj
-from src.translate.translator import GoogleTranslator, PapagoTranslator
+from src.translate.translator import DeepLTranslator, GoogleTranslator, PapagoTranslator
 
 app = FastAPI(title="On the spot Translator API", version="1.0")
 
@@ -30,7 +30,9 @@ async def translate(translate_request: TranslateRequest, user_option: Optional[U
     match user_option.translator_client_info.translator_type:
         case TranslatorType.papago:
             translator = PapagoTranslator(user_option)
-        case TranslatorType.google | _:
+        case TranslatorType.deepl:
+            translator = DeepLTranslator(user_option)
+        case TranslatorType.google:
             translator = GoogleTranslator()
 
     # term_en_set =  Translator.BASE_TERM_EN_SET if self.user_defined_term_set is None \
