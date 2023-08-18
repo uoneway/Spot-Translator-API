@@ -24,10 +24,11 @@ def set_logger(logger):
     # file_handler = logging.FileHandler('./logs/my.log')
 
     # 로그 포멧 정의
-    formatter = logging.Formatter(
-        "(%(asctime)s  %(relativeCreated)d)  [%(levelname)s]  %(filename)s, %(lineno)s line \n>> %(message)s",
-        datefmt="%Y%m%d %H:%M:%S",
-    )
+    formatter = logging.Formatter("(%(asctime)s) [%(levelname)s] %(message)s", datefmt="%y%m%d %H:%M:%S")
+    # formatter = logging.Formatter(
+    #     "(%(asctime)s  %(relativeCreated)d)  [%(levelname)s]  %(filename)s, %(lineno)s line \n>> %(message)s",
+    #     datefmt="%Y%m%d %H:%M:%S",
+    # )
     # formatter.converter = (datetime.datetime.utcnow() + datetime.timedelta(hours=9)).timetuple()
 
     stream_handler.setFormatter(formatter)
@@ -43,7 +44,7 @@ set_logger(logger)
 def gen_log_text(*vars, title=None):  # pre_text=None,
     var_names = argname(vars)
 
-    name_space = 25
+    name_space = 10
     value_space = 50
 
     text = f"<{title}>\n" if title is not None else ""
