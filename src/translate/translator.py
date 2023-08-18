@@ -3,7 +3,7 @@ from abc import ABCMeta, abstractmethod
 from functools import lru_cache
 from typing import Optional, Tuple
 
-import requests
+import httpx
 from googletrans import Translator as GoogleTrans
 
 from src.common.base import gen_log_text, logger
@@ -76,11 +76,11 @@ class Translator(metaclass=ABCMeta):
         return text
 
     @abstractmethod
-    def translate(self, src_text: str, src_lang: str, tgt_lang: str) -> Tuple[Optional[str], Optional[str]]:
+    async def translate(self, src_text: str, src_lang: str, tgt_lang: str) -> Tuple[Optional[str], Optional[str]]:
         return None, None
 
     @lru_cache(maxsize=10)
-    def run(self, src_text: str, tgt_lang: str = None) -> Tuple[Optional[str], int]:
+    async def run(self, src_text: str, tgt_lang: str = None) -> Tuple[Optional[str], int]:
         logger.info(gen_log_text(src_text))
 
         src_text = self.preprocess(src_text)
@@ -92,7 +92,7 @@ class Translator(metaclass=ABCMeta):
         logger.debug(gen_log_text(src_lang, tgt_lang))
 
         # 2. Translation
-        translated_text, resp_code = self.translate(src_text=src_text, src_lang=src_lang, tgt_lang=tgt_lang)
+        translated_text, resp_code = await self.translate(src_text=src_text, src_lang=src_lang, tgt_lang=tgt_lang)
         logger.debug(gen_log_text(translated_text))
 
         if translated_text is None:
@@ -112,7 +112,7 @@ class PapagoTranslator(Translator):
     MAX_CHAR_PER_REQ = 5000
     MAX_CHAR_PER_DAY = 10000
 
-    def translate(self, src_text: str, src_lang: str, tgt_lang: str) -> Tuple[Optional[str], Optional[str]]:
+    async def translate(self, src_text: str, src_lang: str, tgt_lang: str) -> Tuple[Optional[str], Optional[str]]:
         data = {"text": src_text, "source": src_lang, "target": tgt_lang}
         header = {
             # 'content-type': 'application/json; charset=UTF-8',
@@ -121,8 +121,9 @@ class PapagoTranslator(Translator):
         }
         logger.debug(gen_log_text(data, self.api_key))
 
-        response = requests.post(PapagoTranslator.REQ_URL, headers=header, data=data)
-        status_code = response.status_code
+        async with httpx.AsyncClient() as client:
+            response = await client.post(PapagoTranslator.REQ_URL, headers=header, data=data)
+            status_code = response.status_code
 
         if status_code == 200:
             t_data = response.json()
@@ -178,7 +179,7 @@ class GoogleTranslator(Translator):
     def __init__(self):
         self.translator = GoogleTrans()
 
-    def translate(self, src_text: str, src_lang: str, tgt_lang: str) -> Tuple[Optional[str], Optional[str]]:
+    async def translate(self, src_text: str, src_lang: str, tgt_lang: str) -> Tuple[Optional[str], Optional[str]]:
         try:
             resp = self.translator.translate(src_text, src=src_lang, dest=tgt_lang)
             # resp.pronunciation: "oneul-eun wol-yoil-ibnida",
