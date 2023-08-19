@@ -1,4 +1,3 @@
-from dataclasses import asdict
 from pathlib import Path
 from typing import Optional
 
@@ -24,40 +23,42 @@ BASE_TERM_EN_LIST = list(BASE_TERM_EN_SET)
 
 @app.post("/translate")
 async def translate(translate_request: TranslateRequest, user_option: Optional[UserOption] = None):
-    logger.info(f"{'-'*10} New request: {asdict(translate_request)} {'-'*10}")
-    logger.debug(f"User option: {asdict(user_option)}")
+    translator_type = user_option.translator_client_info.translator_type
+    logger.info(f"{'-'*10} New request for {translator_type} {'-'*10}")
 
-    match user_option.translator_client_info.translator_type:
+    match translator_type:
         case TranslatorType.papago:
             translator = PapagoTranslator(user_option)
         case TranslatorType.deepl:
             translator = DeepLTranslator(user_option)
         case TranslatorType.google:
-            translator = GoogleTranslator()
+            translator = GoogleTranslator(user_option)
 
     # term_en_set =  Translator.BASE_TERM_EN_SET if self.user_defined_term_set is None \
     #     else (Translator.BASE_TERM_EN_SET | self.user_defined_term_set)
     # term_en_list = BASE_TERM_EN_LIST
 
-    tgt_lang = "ko"  # translate_request.tgt_lang
-    translated_text, status_msg = await translator.run(src_text=translate_request.src_text, tgt_lang=tgt_lang)
+    status_code = 200
+    translated_text, status_msg = await translator.run(
+        src_text=translate_request.src_text, tgt_lang=translate_request.tgt_lang
+    )
     if translated_text is None and not isinstance(translator, GoogleTranslator):
-        logger.info(f"{user_option.translator_client_info.translator_type} API failed. Try Google API")
-        translator = GoogleTranslator()
-        translated_text, status_msg = await translator.run(src_text=translate_request.src_text, tgt_lang=tgt_lang)
+        logger.error(f"{translator_type} API failed. Try Google API")
+        translator = GoogleTranslator(user_option)
+        translated_text, _ = await translator.run(
+            src_text=translate_request.src_text, tgt_lang=translate_request.tgt_lang
+        )
 
         if translated_text is None:
-            logger.info("Google API also failed")
-            translated_text = None
-            status_msg = "API failed"
-            return JSONResponse(
-                content={"message": {"result": {"translatedText": translated_text, "api_rescode": status_msg}}},
-                status_code=400,
-            )
+            logger.error("Google API also failed")
+            status_msg = status_msg + "<br/>Google API also failed"
+            status_code = 503
+        else:
+            status_msg = status_msg + "<br/>But translate it by Google API"
 
-    response_dict = {"message": {"result": {"translatedText": translated_text, "api_rescode": status_msg}}}
+    response_dict = {"message": {"result": {"translatedText": translated_text, "status_msg": status_msg}}}
     response_json = jsonable_encoder(response_dict)
-    return JSONResponse(content=response_json, status_code=200)
+    return JSONResponse(content=response_json, status_code=status_code)
 
 
 if __name__ == "__main__":

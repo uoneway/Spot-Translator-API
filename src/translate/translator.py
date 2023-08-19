@@ -7,12 +7,14 @@ import httpx
 from googletrans import Translator as GoogleTrans
 
 from src.common.base import gen_log_text, logger
-from src.common.models import UserOption
+from src.common.models import APIErrorCode, UserOption
 from src.translate.utils import isKoreanIncluded
 
 
 class Translator:
-    MAX_CHAR_PER_REQ = 5000
+    SERVICE_NAME: str
+    error_code: APIErrorCode
+    MAX_CHAR_PER_REQ: int = None
 
     def __init__(
         self,
@@ -53,8 +55,10 @@ class Translator:
     def preprocess(cls, text: str) -> str:
         """주어진 text가 MAX_CHAR_PER_REQ를 넘는 경우는
         일단 MAX_CHAR_PER_REQ 길이만큼 만든 다음에
-        (기호가 쓰여져서) 문장이 끝나는 것으로 보이는 지점을 찾아 그 기준으로 나눈다.
+        (기호가 쓰여져서) 문장이 끝나는 것으로 보이는 지점을 찾아 그 기준으로 나누고 뒷 부분은 버림
+        TODO: 문장 단위로 나눠서 여러번 호출 또는 batch로 호출하도록 수정
         """
+        ELLIPSIS_SYMBOL = "..."
 
         def _get_split_idx(s: str) -> int:
             match = re.finditer(r"[.:;!?<>()\[\]]", s[::-1])
@@ -67,59 +71,67 @@ class Translator:
             return index
 
         if cls.MAX_CHAR_PER_REQ is not None and len(text) > cls.MAX_CHAR_PER_REQ:
-            split_idx = _get_split_idx(text[: cls.MAX_CHAR_PER_REQ])
-            text = text[:split_idx]
+            split_idx = _get_split_idx(text[: cls.MAX_CHAR_PER_REQ - len(ELLIPSIS_SYMBOL)])
+            text = text[:split_idx] + ELLIPSIS_SYMBOL
+            logger.warning(f"Since rext is longger than {cls.MAX_CHAR_PER_REQ}, only front part would be translated")
         return text.strip()
 
     @classmethod
     def postprocess(cls, text: str) -> str:
-        return text
+        return text.strip()
 
     @abstractmethod
-    async def translate(self, src_text: str, src_lang: str, tgt_lang: str) -> Tuple[Optional[str], Optional[str]]:
+    async def translate(self, src_text: str, src_lang: str, tgt_lang: str) -> Tuple[Optional[str], Optional[int]]:
         return None, None
 
     @lru_cache(maxsize=10)
-    async def run(self, src_text: str, tgt_lang: str = None) -> Tuple[Optional[str], int]:
-        logger.info(gen_log_text(src_text))
-
+    async def run(self, src_text: str, tgt_lang: str = None) -> Tuple[Optional[str], Optional[str]]:
+        """translated_text, error_msg 를 리턴"""
         src_text = self.preprocess(src_text)
+        logger.info(f"Text to translate: '{src_text}'")
+        if not src_text:
+            return "", "❗ Empty text"
 
         # 1. Detect src_lang and set tgt_lang
         src_lang = Translator.identify_lang(src_text)
         if tgt_lang is None:
             tgt_lang = self.main_tgt_lang if src_lang != self.main_tgt_lang else self.sub_tgt_lang
-        logger.debug(gen_log_text(src_lang, tgt_lang))
+        logger.info(f"Language: {src_lang} (detected) -> {tgt_lang}")
 
-        # 2. Translation
-        translated_text, resp_code = await self.translate(src_text=src_text, src_lang=src_lang, tgt_lang=tgt_lang)
-        logger.debug(gen_log_text(translated_text))
-
-        if translated_text is None:
-            logger.error(gen_log_text(resp_code))
-            return None, resp_code
-
+        # 2. Translate
+        translated_text, status_code = await self.translate(src_text=src_text, src_lang=src_lang, tgt_lang=tgt_lang)
+        if translated_text is not None:
+            translated_text = self.postprocess(translated_text)
+            logger.info(f"Translated text: {translated_text}")
+            return translated_text, None
         else:
-            result_text = self.postprocess(translated_text)
-            logger.info(gen_log_text(result_text))
-
-            return result_text, resp_code
+            error_msg = self.__class__.error_code.convert_to_msg(status_code)
+            logger.error(f"{error_msg}")
+            return None, error_msg
 
 
 class PapagoTranslator(Translator):
-    # https://developers.naver.com/docs/papago/papago-nmt-overview.md
+    """
+    - https://developers.naver.com/docs/papago/papago-nmt-overview.md
+    - https://developers.naver.com/docs/common/openapiguide/
+        errorcode.md#%EC%98%A4%EB%A5%98-%EB%A9%94%EC%8B%9C%EC%A7%80-%ED%98%95%EC%8B%9D
+    """
+
+    SERVICE_NAME = "Papago"
     REQUEST_URL = "https://openapi.naver.com/v1/papago/n2mt"
     MAX_CHAR_PER_REQ = 5000
-    MAX_CHAR_PER_DAY = 10000
+    # MAX_CHAR_PER_DAY = 10000
 
-    async def translate(self, src_text: str, src_lang: str, tgt_lang: str) -> Tuple[Optional[str], Optional[str]]:
+    error_code = APIErrorCode(service_name=SERVICE_NAME, auth_failed=401, rate_limit_exceeded=429, quota_exceeded=429)
+
+    async def translate(self, src_text: str, src_lang: str, tgt_lang: str) -> Tuple[Optional[str], Optional[int]]:
         header = {
-            # 'content-type': 'application/json; charset=UTF-8',
+            # 'content-type': 'application/x-www-form-urlencoded; charset=UTF-8',
             "X-Naver-Client-Id": self.api_key,
             "X-Naver-Client-Secret": self.secret_key,
         }
         data = {"text": src_text, "source": src_lang, "target": tgt_lang}
-        logger.debug(gen_log_text(data, self.api_key))
+        logger.debug(gen_log_text(data))
 
         async with httpx.AsyncClient() as client:
             response = await client.post(PapagoTranslator.REQUEST_URL, headers=header, data=data)
@@ -128,95 +140,68 @@ class PapagoTranslator(Translator):
         if status_code == 200:
             t_data = response.json()
             translated_text = t_data["message"]["result"]["translatedText"]
-
-            return translated_text, None
-
+            return translated_text, status_code
         else:
-            logger.error(gen_log_text(response.status_code, response.text))
-            status_msg = PapagoTranslator.convert_status_code_to_msg(status_code)
-            logger.error(gen_log_text(status_msg))
-            return None, status_msg
-
-    def convert_status_code_to_msg(status_code):
-        # https://developers.naver.com/docs/common/openapiguide/
-        # errorcode.md#%EC%98%A4%EB%A5%98-%EB%A9%94%EC%8B%9C%EC%A7%80-%ED%98%95%EC%8B%9D
-
-        msg_forForDetail = (
-            "</br>For more details, click"
-            + "<a target='_blank' "
-            + "href='https://uoneway.notion.site/On-the-spot-Translator-1826d87aa2d845d093793cee0ca11b29'"
-            + " style='color: #008eff; pointer-events: all;'><u>here</u></a>"
-        )
-        if status_code == 401:
-            msg = (
-                "🔧 Authentication failed: </br>"
-                + "Please make sure you enter correct 'Naver API application info(Client ID and Client Secret)'"
-                + " in the option popup."
-                + msg_forForDetail
-            )
-        elif status_code == 403:
-            msg = (
-                "🔧 You don't have the 'Papago Translation API' permission: </br>"
-                + "Please add 'Papago Translation' on 'API setting' tab in the Naver Developer Center website."
-                + msg_forForDetail
-            )
-        elif status_code == 429:
-            msg = (
-                "⏳ Used up all your daily usage: </br>"
-                + "This translator use Naver Papago API which provide only 10,000 characters translation per a day."
-            )
-        else:
-            msg = "❗ Error: </br>Some problem occured at Naver Papago API. Please try again in a few minutes"
-
-        return msg
+            logger.error(gen_log_text(response.__dict__))
+            return None, status_code
 
 
 class GoogleTranslator(Translator):
-    # https://github.com/ssut/py-googletrans
-    # https://py-googletrans.readthedocs.io/en/latest/
-    # https://pypi.org/project/googletrans/
+    """
+    - https://github.com/ssut/py-googletrans
+    - https://py-googletrans.readthedocs.io/en/latest/
+    - https://pypi.org/project/googletrans/
+    """
+
+    SERVICE_NAME = "Google"
     MAX_CHAR_PER_REQ = 15000
+    error_code = APIErrorCode(service_name=SERVICE_NAME)
+    translator = GoogleTrans()
 
-    def __init__(self):
-        self.translator = GoogleTrans()
-
-    async def translate(self, src_text: str, src_lang: str, tgt_lang: str) -> Tuple[Optional[str], Optional[str]]:
+    async def translate(self, src_text: str, src_lang: str, tgt_lang: str) -> Tuple[Optional[str], Optional[int]]:
         try:
-            resp = self.translator.translate(src_text, src=src_lang, dest=tgt_lang)
-            # resp.pronunciation: "oneul-eun wol-yoil-ibnida",
-            return resp.text, None
+            response = self.__class__.translator.translate(src_text, src=src_lang, dest=tgt_lang)
+            # response.pronunciation: "oneul-eun wol-yoil-ibnida",
+            return response.text, None
 
-        except Exception:
-            status_msg = "❗ Error: </br>Some problem occured at googletrans. Please try again in a few minutes"
-            return None, status_msg
+        except Exception as e:
+            logger.error(e)
+            status_code = 400
+            return None, status_code
 
 
 class DeepLTranslator(Translator):
-    REQUEST_URL = "https://api-free.deepl.com/v2/translate"
+    """
+    - https://www.deepl.com/ko/docs-api/translate-text/translate-text
+    - https://www.deepl.com/ko/docs-api/api-access/error-handling
+    """
 
-    async def translate(self, src_text: str, src_lang: str, tgt_lang: str) -> Tuple[Optional[str], Optional[str]]:
+    SERVICE_NAME = "DeepL"
+    MAX_CHAR_PER_REQ = None
+    REQUEST_URL = "https://api-free.deepl.com/v2/translate"
+    error_code = APIErrorCode(
+        service_name=SERVICE_NAME, auth_failed=[401, 403], rate_limit_exceeded=429, quota_exceeded=456
+    )
+
+    async def translate(self, src_text: str, src_lang: str, tgt_lang: str) -> Tuple[Optional[str], Optional[int]]:
         header = {
-            "Authorization": self.secret_key,
+            "Authorization": "DeepL-Auth-Key " + self.secret_key,
             "Content-Type": "application/json",
         }
-        data = {"text": [src_text], "target_lang": tgt_lang}
-        logger.debug(gen_log_text(data, self.secret_key))
+        data = {"text": [src_text], "source_lang": src_lang, "target_lang": tgt_lang}
+        logger.debug(gen_log_text(data))
 
         async with httpx.AsyncClient() as client:
-            response = await client.post(DeepLTranslator.REQUEST_URL, headers=header, data=data)
+            response = await client.post(DeepLTranslator.REQUEST_URL, headers=header, json=data)
             status_code = response.status_code
 
         if status_code == 200:
-            t_data = response.json()
-            translated_text = t_data["message"]["result"]["translatedText"]
-
+            resp_data = response.json()
+            logger.debug(resp_data)
+            # {'translations': [{'detected_source_language': 'EN', 'text': '이동'}]}
+            translated_text = resp_data["translations"][0]["text"]
             return translated_text, None
 
         else:
-            logger.error(gen_log_text(response.status_code, response.text))
-            status_msg = DeepLTranslator.convert_status_code_to_msg(status_code)
-            logger.error(gen_log_text(status_msg))
-            return None, status_msg
-
-    def convert_status_code_to_msg(status_code):
-        return str(status_code)
+            logger.error(gen_log_text(response.__dict__))
+            return None, status_code
