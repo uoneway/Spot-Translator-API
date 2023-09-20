@@ -24,8 +24,8 @@ class TranslatorType(StrEnum):
 @dataclass
 class TranslatorClientInfo:
     translator_type: TranslatorType
-    secret_key: str
     api_key: Optional[str] = None
+    secret_key: Optional[str] = None
 
 
 @dataclass
@@ -74,8 +74,7 @@ class APIErrorCode:
         if status_code in self.auth_failed:
             msgs.append(
                 f"🔒 [{self.service_name}] Authentication Failed:</br>"
-                + "- Please make sure you enter correct API key or secret key of the translator API "
-                + "in the option popup.</br>"
+                + "- Check the translator API keys you enter in the option popup.</br>"
                 + "- Check if you have access permissions to the translator API."
             )
         if status_code in self.rate_limit_exceeded:
