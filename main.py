@@ -44,6 +44,7 @@ async def translate(translate_request: TranslateRequest, user_option: Optional[U
     )
     if translated_text is None and not isinstance(translator, GoogleTranslator):
         logger.error(f"{translator_type} API failed. Try Google API")
+        translator_type = TranslatorType.google
         translator = GoogleTranslator(user_option)
         translated_text, _ = await translator.run(
             src_text=translate_request.src_text, tgt_lang=translate_request.tgt_lang
@@ -56,7 +57,7 @@ async def translate(translate_request: TranslateRequest, user_option: Optional[U
         else:
             status_msg = status_msg + "<br/>But translate it by Google API"
 
-    response_dict = {"message": {"result": {"translatedText": translated_text, "status_msg": status_msg}}}
+    response_dict = {"text": translated_text, "status_msg": status_msg, "translator_type": translator_type}
     response_json = jsonable_encoder(response_dict)
     return JSONResponse(content=response_json, status_code=status_code)
 
