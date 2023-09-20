@@ -185,7 +185,7 @@ class DeepLTranslator(Translator):
 
     async def translate(self, src_text: str, src_lang: str, tgt_lang: str) -> Tuple[Optional[str], Optional[int]]:
         header = {
-            "Authorization": "DeepL-Auth-Key " + self.secret_key,
+            "Authorization": "DeepL-Auth-Key " + self.api_key,
             "Content-Type": "application/json",
         }
         data = {"text": [src_text], "source_lang": src_lang, "target_lang": tgt_lang}
