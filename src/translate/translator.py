@@ -1,6 +1,7 @@
 import re
 from abc import abstractmethod
 from functools import lru_cache
+from pathlib import Path
 from typing import Optional, Tuple
 
 import httpx
@@ -8,12 +9,20 @@ from googletrans import Translator as GoogleTrans
 
 from src.common.base import gen_log_text, logger
 from src.common.models import APIErrorCode, UserOption
+from src.common.utils import load_obj
 from src.translate.utils import isKoreanIncluded
+
+SUPPORT_LANG_DIR = Path("data/support_lang")
+with open(SUPPORT_LANG_DIR / "code_to_lang.tsv", "r") as file:
+    code_to_lang_dict = {line.split("\t")[0]: line.split("\t")[1].strip() for line in file}
 
 
 class Translator:
     SERVICE_NAME: str
+    SUPPORT_SRC_LANG: list
+    SUPPORT_TGT_LANG: list
     error_code: APIErrorCode
+    REQUEST_URL: str = None
     MAX_CHAR_PER_REQ: int = None
 
     def __init__(
@@ -50,6 +59,22 @@ class Translator:
                 lang = "en"
 
         return lang
+
+    def check_lang_is_supported_and_transform_if_needed(
+        cls, src_lang: str, tgt_lang: str
+    ) -> tuple[bool | str, bool | str]:
+        if src_lang not in cls.SUPPORT_SRC_LANG:
+            src_lang = src_lang.split("-")[0]
+            if src_lang not in cls.SUPPORT_SRC_LANG:
+                logger.warning(f"{cls.SERVICE_NAME} is not supported the source language: {src_lang}")
+                src_lang = False
+        if tgt_lang not in cls.SUPPORT_TGT_LANG:
+            tgt_lang = tgt_lang.split("-")[0]
+            if tgt_lang not in cls.SUPPORT_TGT_LANG:
+                logger.warning(f"{cls.SERVICE_NAME} is not supported the target language: {tgt_lang}")
+                tgt_lang = False
+
+        return src_lang, tgt_lang
 
     @classmethod
     def preprocess(cls, text: str) -> str:
@@ -96,7 +121,17 @@ class Translator:
         src_lang = Translator.identify_lang(src_text)
         if tgt_lang is None:
             tgt_lang = self.main_tgt_lang if src_lang != self.main_tgt_lang else self.sub_tgt_lang
-        logger.info(f"Language: {src_lang} (detected) -> {tgt_lang}")
+
+        src_lang_orig, tgt_lang_orig = src_lang, tgt_lang
+        src_lang, tgt_lang = self.check_lang_is_supported_and_transform_if_needed(src_lang, tgt_lang)
+        _msgs = []
+        if not src_lang:
+            _msgs.append(f"source language('{code_to_lang_dict[src_lang_orig]}')")
+        if not tgt_lang:
+            _msgs.append(f"target language('{code_to_lang_dict[tgt_lang_orig]}')")
+        if _msgs:
+            msg = " and ".join(_msgs)
+            return None, f"❗ {self.SERVICE_NAME} is not supported the {msg}"
 
         # 2. Translate
         translated_text, status_code = await self.translate(src_text=src_text, src_lang=src_lang, tgt_lang=tgt_lang)
@@ -118,11 +153,12 @@ class PapagoTranslator(Translator):
     """
 
     SERVICE_NAME = "Papago"
+    SUPPORT_SRC_LANG: list = load_obj(SUPPORT_LANG_DIR / "papago_src_lang.txt")
+    SUPPORT_TGT_LANG: list = load_obj(SUPPORT_LANG_DIR / "papago_tgt_lang.txt")
+    error_code = APIErrorCode(service_name=SERVICE_NAME, auth_failed=401, rate_limit_exceeded=429, quota_exceeded=429)
     REQUEST_URL = "https://openapi.naver.com/v1/papago/n2mt"
     MAX_CHAR_PER_REQ = 5000
     # MAX_CHAR_PER_DAY = 10000
-
-    error_code = APIErrorCode(service_name=SERVICE_NAME, auth_failed=401, rate_limit_exceeded=429, quota_exceeded=429)
 
     async def translate(self, src_text: str, src_lang: str, tgt_lang: str) -> Tuple[Optional[str], Optional[int]]:
         header = {
@@ -154,8 +190,11 @@ class GoogleTranslator(Translator):
     """
 
     SERVICE_NAME = "Google"
+    SUPPORT_SRC_LANG: list = load_obj(SUPPORT_LANG_DIR / "google_src_lang.txt")
+    SUPPORT_TGT_LANG: list = load_obj(SUPPORT_LANG_DIR / "google_tgt_lang.txt")
     MAX_CHAR_PER_REQ = 15000
     error_code = APIErrorCode(service_name=SERVICE_NAME)
+
     translator = GoogleTrans()
 
     async def translate(self, src_text: str, src_lang: str, tgt_lang: str) -> Tuple[Optional[str], Optional[int]]:
@@ -177,6 +216,8 @@ class DeepLTranslator(Translator):
     """
 
     SERVICE_NAME = "DeepL"
+    SUPPORT_SRC_LANG: list = load_obj(SUPPORT_LANG_DIR / "deepl_src_lang.txt")
+    SUPPORT_TGT_LANG: list = load_obj(SUPPORT_LANG_DIR / "deepl_tgt_lang.txt")
     MAX_CHAR_PER_REQ = None
     REQUEST_URL = "https://api-free.deepl.com/v2/translate"
     error_code = APIErrorCode(

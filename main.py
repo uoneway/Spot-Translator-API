@@ -12,7 +12,7 @@ from src.translate.translator import DeepLTranslator, GoogleTranslator, PapagoTr
 
 app = FastAPI(title="On the spot Translator API", version="1.0")
 
-TERM_EN_DIR = Path("src/translate/term_set")
+TERM_EN_DIR = Path("data/term_set")
 BASE_TERM_EN_FILES = ["ml_terms_google_picked.txt", "ml_terms_manual.txt"]
 BASE_TERM_EN_SET = set()
 for filename in BASE_TERM_EN_FILES:
