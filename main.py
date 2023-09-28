@@ -10,7 +10,7 @@ from src.common.models import TranslateRequest, TranslatorType, UserOption
 from src.common.utils import load_obj
 from src.translate.translator import DeepLTranslator, GoogleTranslator, PapagoTranslator
 
-app = FastAPI(title="On the spot Translator API", version="1.0")
+app = FastAPI(title="Spot Translator API", version="1.0")
 
 TERM_EN_DIR = Path("data/term_set")
 BASE_TERM_EN_FILES = ["ml_terms_google_picked.txt", "ml_terms_manual.txt"]

@@ -99,10 +99,10 @@ class APIErrorCode:
             msg = "</br>Or</br>".join(msgs)
 
         appended_msg = (
-            "</br>For more details, See"
+            "</br>For more details, See "
             + "<a target='_blank' "
-            + "href='https://uoneway.notion.site/On-the-spot-Translator-1826d87aa2d845d093793cee0ca11b29'"
-            + " style='color: #008eff; pointer-events: all;'><u>On-the-spot-Translator guide page</u></a>"
+            + "https://uoneway.notion.site/Spot-Translator-1826d87aa2d845d093793cee0ca11b29'"
+            + " style='color: #008eff; pointer-events: all;'><u>Spot-Translator guide page</u></a>"
         )
 
         return msg + appended_msg
